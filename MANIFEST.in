@@ -1,0 +1,7 @@
+include README.md
+include LICENSE
+include requirements.txt
+include config.example.yaml
+recursive-include remote_cmd *.py
+recursive-include tests *.py
+recursive-include examples *.py

@@ -1,0 +1,15 @@
+# Default configuration file for Remote CMD
+# Copy this file to config.yaml and modify as needed
+
+# Hosts configuration file path
+hosts_file: hosts.json
+
+# Default SSH settings
+default_ssh_port: 22
+default_timeout: 30
+
+# Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+log_level: INFO
+
+# SSH key directory (optional)
+# ssh_key_dir: ~/.ssh
