@@ -1,62 +1,135 @@
+"""
+命令行接口模块
+
+提供完整的命令行工具，用于管理远程主机和执行 SSH 操作。
+基于 Click 框架构建，支持丰富的命令和选项。
+
+主要命令：
+- host: 主机管理命令组
+  - add: 添加新主机
+  - list: 列出所有主机
+  - remove: 移除主机
+  - test: 测试主机连接
+- run: 在远程主机上执行命令
+- upload: 上传文件到远程主机
+- download: 从远程主机下载文件
+
+Author: Vae-Scrooge
+"""
+
 import click
 import sys
 from typing import Optional
 
-from remote_cmd.core.host_manager import HostManager
-from remote_cmd.core.ssh_client import SSHClient, ConnectionConfig
+from remote_cmd.core.host_manager import HostManager, Host
+from remote_cmd.core.ssh_client import SSHClient
 from remote_cmd.utils.config import load_config, get_default_config_path
 
 
+# ============================================================================
+# CLI 主入口
+# ============================================================================
+
 @click.group()
-@click.version_option(version="1.0.0")
+@click.version_option(version="1.0.0", prog_name="remote-cmd")
 @click.option(
     "--config",
     "-c",
     type=click.Path(),
-    help="Path to configuration file"
+    help="配置文件路径"
 )
 @click.option(
     "--verbose",
     "-v",
     is_flag=True,
-    help="Enable verbose output"
+    help="启用详细输出模式"
 )
 @click.pass_context
 def cli(ctx, config: Optional[str], verbose: bool):
-    """Remote CMD - SSH Remote Server Management Tool"""
+    """
+    Remote CMD - SSH 远程服务器管理工具
+    
+    一个功能强大的命令行工具，用于管理远程主机配置、
+    执行命令和传输文件。
+    
+    快速开始：
+        # 添加主机
+        remote-cmd host add my-server 192.168.1.100 admin -k ~/.ssh/id_rsa
+        
+        # 列出所有主机
+        remote-cmd host list
+        
+        # 执行远程命令
+        remote-cmd run my-server "ls -la"
+        
+        # 上传文件
+        remote-cmd upload my-server ./local.txt /remote/path.txt
+    """
+    # 初始化上下文对象
     ctx.ensure_object(dict)
     
-    # Initialize configuration
+    # 加载配置文件
     config_path = config or get_default_config_path()
     ctx.obj["config"] = load_config(config_path)
     ctx.obj["verbose"] = verbose
     
+    # 详细模式下显示配置信息
     if verbose:
-        click.echo(f"Using config: {config_path}")
+        click.echo(f"使用配置文件: {config_path}")
 
+
+# ============================================================================
+# 主机管理命令组
+# ============================================================================
 
 @cli.group()
 def host():
-    """Manage remote hosts"""
+    """
+    主机管理命令组
+    
+    用于添加、删除、列出和测试远程主机连接。
+    
+    可用命令：
+        add     添加新主机
+        list    列出所有主机
+        remove  移除主机
+        test    测试主机连接
+    """
     pass
 
 
 @host.command("add")
-@click.argument("name")
-@click.argument("hostname")
-@click.argument("username")
-@click.option("--port", "-p", default=22, help="SSH port")
-@click.option("--password", "-P", help="Password authentication")
-@click.option("--key", "-k", help="SSH private key file")
-@click.option("--tag", "-t", multiple=True, help="Host tags")
-@click.option("--description", "-d", help="Host description")
+@click.argument("name", required=True)
+@click.argument("hostname", required=True)
+@click.argument("username", required=True)
+@click.option("--port", "-p", default=22, help="SSH 端口号（默认：22）")
+@click.option("--password", "-P", help="登录密码")
+@click.option("--key", "-k", help="SSH 私钥文件路径")
+@click.option("--tag", "-t", multiple=True, help="主机标签（可多次指定）")
+@click.option("--description", "-d", default="", help="主机描述")
 @click.pass_context
-def host_add(ctx, name, hostname, username, port, password, key, tag, description):
-    """Add a new host"""
+def host_add(ctx, name: str, hostname: str, username: str, port: int, 
+             password: Optional[str], key: Optional[str], tag: tuple, description: str):
+    """
+    添加新主机
+    
+    NAME: 主机名称（唯一标识符）
+    HOSTNAME: 主机地址（IP 或域名）
+    USERNAME: SSH 登录用户名
+    
+    示例：
+        # 使用密码认证
+        remote-cmd host add server1 192.168.1.100 admin -P mypassword
+        
+        # 使用 SSH 密钥
+        remote-cmd host add server2 example.com deploy -k ~/.ssh/id_rsa
+        
+        # 添加标签
+        remote-cmd host add server3 192.168.1.102 admin -k ~/.ssh/id_rsa -t web -t production
+    """
     manager = HostManager()
     
-    from remote_cmd.core.host_manager import Host
-    
+    # 创建主机配置对象
     host = Host(
         name=name,
         hostname=hostname,
@@ -65,136 +138,224 @@ def host_add(ctx, name, hostname, username, port, password, key, tag, descriptio
         password=password,
         key_filename=key,
         tags=list(tag),
-        description=description or ""
+        description=description
     )
     
     try:
+        # 添加主机并保存配置
         manager.add_host(host)
-        manager.save_to_file(ctx.obj["config"].get("hosts_file", "hosts.json"))
-        click.echo(f"✓ Host '{name}' added successfully")
+        config_file = ctx.obj["config"].get("hosts_file", "hosts.json")
+        manager.save_to_file(config_file)
+        
+        click.echo(f"✓ 主机 '{name}' 添加成功")
+        
     except ValueError as e:
-        click.echo(f"✗ Error: {e}", err=True)
+        click.echo(f"✗ 错误: {e}", err=True)
         sys.exit(1)
 
 
 @host.command("list")
-@click.option("--tag", "-t", help="Filter by tag")
+@click.option("--tag", "-t", help="按标签筛选主机")
 @click.pass_context
-def host_list(ctx, tag):
-    """List all hosts"""
-    manager = HostManager(ctx.obj["config"].get("hosts_file", "hosts.json"))
+def host_list(ctx, tag: Optional[str]):
+    """
+    列出所有主机
     
+    显示所有已配置的主机信息，可选按标签筛选。
+    
+    示例：
+        # 列出所有主机
+        remote-cmd host list
+        
+        # 列出特定标签的主机
+        remote-cmd host list -t production
+    """
+    config_file = ctx.obj["config"].get("hosts_file", "hosts.json")
+    manager = HostManager(config_file)
+    
+    # 获取主机列表
     hosts = manager.list_hosts(tag=tag)
     
     if not hosts:
-        click.echo("No hosts found")
+        if tag:
+            click.echo(f"没有找到标签为 '{tag}' 的主机")
+        else:
+            click.echo("没有配置任何主机")
         return
     
-    click.echo(f"\n{'Name':<20} {'Hostname':<25} {'Username':<15} {'Tags':<20}")
+    # 格式化输出表头
+    click.echo(f"\n{'名称':<20} {'主机地址':<25} {'用户名':<15} {'标签':<20}")
     click.echo("-" * 80)
     
+    # 输出主机信息
     for host in hosts:
-        tags = ", ".join(host.tags) if host.tags else "-"
-        click.echo(f"{host.name:<20} {host.hostname:<25} {host.username:<15} {tags:<20}")
+        tags_str = ", ".join(host.tags) if host.tags else "-"
+        click.echo(f"{host.name:<20} {host.hostname:<25} {host.username:<15} {tags_str:<20}")
     
     click.echo()
 
 
 @host.command("remove")
-@click.argument("name")
-@click.confirmation_option(prompt="Are you sure you want to remove this host?")
+@click.argument("name", required=True)
+@click.confirmation_option(prompt="确定要移除这个主机吗？")
 @click.pass_context
-def host_remove(ctx, name):
-    """Remove a host"""
-    manager = HostManager(ctx.obj["config"].get("hosts_file", "hosts.json"))
+def host_remove(ctx, name: str):
+    """
+    移除主机
+    
+    NAME: 要移除的主机名称
+    
+    示例：
+        remote-cmd host remove old-server
+    """
+    config_file = ctx.obj["config"].get("hosts_file", "hosts.json")
+    manager = HostManager(config_file)
     
     try:
         manager.remove_host(name)
-        manager.save_to_file(ctx.obj["config"].get("hosts_file", "hosts.json"))
-        click.echo(f"✓ Host '{name}' removed successfully")
+        manager.save_to_file(config_file)
+        
+        click.echo(f"✓ 主机 '{name}' 已移除")
+        
     except KeyError as e:
-        click.echo(f"✗ Error: {e}", err=True)
+        click.echo(f"✗ 错误: {e}", err=True)
         sys.exit(1)
 
 
 @host.command("test")
-@click.argument("name")
+@click.argument("name", required=True)
 @click.pass_context
-def host_test(ctx, name):
-    """Test connection to a host"""
-    manager = HostManager(ctx.obj["config"].get("hosts_file", "hosts.json"))
+def host_test(ctx, name: str):
+    """
+    测试主机连接
     
-    click.echo(f"Testing connection to '{name}'...")
+    NAME: 要测试的主机名称
+    
+    示例：
+        remote-cmd host test web-server
+    """
+    config_file = ctx.obj["config"].get("hosts_file", "hosts.json")
+    manager = HostManager(config_file)
+    
+    click.echo(f"正在测试 '{name}' 的连接...")
     
     if manager.test_connection(name):
-        click.echo(f"✓ Connection to '{name}' successful")
+        click.echo(f"✓ 主机 '{name}' 连接成功")
     else:
-        click.echo(f"✗ Connection to '{name}' failed", err=True)
+        click.echo(f"✗ 主机 '{name}' 连接失败", err=True)
         sys.exit(1)
 
 
+# ============================================================================
+# 远程操作命令
+# ============================================================================
+
 @cli.command()
-@click.argument("host_name")
-@click.argument("command")
+@click.argument("host_name", required=True)
+@click.argument("command", required=True)
 @click.pass_context
-def run(ctx, host_name, command):
-    """Execute a command on remote host"""
-    manager = HostManager(ctx.obj["config"].get("hosts_file", "hosts.json"))
+def run(ctx, host_name: str, command: str):
+    """
+    在远程主机上执行命令
+    
+    HOST_NAME: 主机名称
+    COMMAND: 要执行的命令
+    
+    示例：
+        remote-cmd run web-server "ls -la"
+        remote-cmd run db-server "uptime"
+    """
+    config_file = ctx.obj["config"].get("hosts_file", "hosts.json")
+    manager = HostManager(config_file)
     
     try:
         with manager.connect_to_host(host_name) as client:
             result = client.execute(command)
             
+            # 输出命令结果
             if result.stdout:
                 click.echo(result.stdout)
             
             if result.stderr:
                 click.echo(result.stderr, err=True)
             
+            # 使用命令的退出码
             sys.exit(result.exit_code)
+            
     except Exception as e:
-        click.echo(f"✗ Error: {e}", err=True)
+        click.echo(f"✗ 错误: {e}", err=True)
         sys.exit(1)
 
 
 @cli.command()
-@click.argument("host_name")
-@click.argument("local_path")
-@click.argument("remote_path")
+@click.argument("host_name", required=True)
+@click.argument("local_path", required=True)
+@click.argument("remote_path", required=True)
 @click.pass_context
-def upload(ctx, host_name, local_path, remote_path):
-    """Upload file to remote host"""
-    manager = HostManager(ctx.obj["config"].get("hosts_file", "hosts.json"))
+def upload(ctx, host_name: str, local_path: str, remote_path: str):
+    """
+    上传文件到远程主机
+    
+    HOST_NAME: 主机名称
+    LOCAL_PATH: 本地文件路径
+    REMOTE_PATH: 远程目标路径
+    
+    示例：
+        remote-cmd upload web-server ./script.sh /tmp/script.sh
+    """
+    config_file = ctx.obj["config"].get("hosts_file", "hosts.json")
+    manager = HostManager(config_file)
     
     try:
         with manager.connect_to_host(host_name) as client:
             client.upload_file(local_path, remote_path)
-            click.echo(f"✓ Uploaded {local_path} -> {host_name}:{remote_path}")
+            click.echo(f"✓ 上传成功: {local_path} -> {host_name}:{remote_path}")
+            
     except Exception as e:
-        click.echo(f"✗ Error: {e}", err=True)
+        click.echo(f"✗ 错误: {e}", err=True)
         sys.exit(1)
 
 
 @cli.command()
-@click.argument("host_name")
-@click.argument("remote_path")
-@click.argument("local_path")
+@click.argument("host_name", required=True)
+@click.argument("remote_path", required=True)
+@click.argument("local_path", required=True)
 @click.pass_context
-def download(ctx, host_name, remote_path, local_path):
-    """Download file from remote host"""
-    manager = HostManager(ctx.obj["config"].get("hosts_file", "hosts.json"))
+def download(ctx, host_name: str, remote_path: str, local_path: str):
+    """
+    从远程主机下载文件
+    
+    HOST_NAME: 主机名称
+    REMOTE_PATH: 远程文件路径
+    LOCAL_PATH: 本地目标路径
+    
+    示例：
+        remote-cmd download web-server /var/log/syslog ./logs/syslog
+    """
+    config_file = ctx.obj["config"].get("hosts_file", "hosts.json")
+    manager = HostManager(config_file)
     
     try:
         with manager.connect_to_host(host_name) as client:
             client.download_file(remote_path, local_path)
-            click.echo(f"✓ Downloaded {host_name}:{remote_path} -> {local_path}")
+            click.echo(f"✓ 下载成功: {host_name}:{remote_path} -> {local_path}")
+            
     except Exception as e:
-        click.echo(f"✗ Error: {e}", err=True)
+        click.echo(f"✗ 错误: {e}", err=True)
         sys.exit(1)
 
 
+# ============================================================================
+# 程序入口
+# ============================================================================
+
 def main():
-    """Entry point for the CLI"""
+    """
+    CLI 程序入口点
+    
+    由 setup.py 的 console_scripts 配置调用。
+    也可以直接运行此模块：python -m remote_cmd.cli.main
+    """
     cli()
 
 
