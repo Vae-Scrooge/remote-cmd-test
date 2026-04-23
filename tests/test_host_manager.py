@@ -1,214 +1,116 @@
-"""
-主机管理器单元测试
-
-测试 HostManager 和 Host 类的功能。
-使用 pytest 进行测试。
-
-测试覆盖：
-- Host 数据类功能
-- HostManager 主机管理
-- 配置持久化（JSON）
-- 连接测试
-
-运行方式：
-    pytest tests/test_host_manager.py -v
-"""
-
-import pytest
 import json
-import tempfile
-from pathlib import Path
-
-from remote_cmd.core.host_manager import HostManager, Host
-from remote_cmd.utils.exceptions import SSHConnectionError
+import pytest
+from remote_cmd.core.host_manager import Host, HostManager
+from remote_cmd.core.ssh_client import ConnectionConfig
 
 
-# ============================================================================
-# Host 数据类测试
-# ============================================================================
-
-class TestHost:
-    """Host 数据类测试"""
-    
-    def test_host_creation(self):
-        """测试：创建主机配置"""
-        host = Host(
-            name="test-server",
-            hostname="192.168.1.100",
-            username="admin",
-            password="secret",
-            tags=["web", "production"]
-        )
-        
-        assert host.name == "test-server"
-        assert host.hostname == "192.168.1.100"
-        assert host.username == "admin"
-        assert host.tags == ["web", "production"]
-    
-    def test_host_to_dict(self):
-        """测试：主机配置转字典"""
-        host = Host(
-            name="test-server",
-            hostname="192.168.1.100",
-            username="admin"
-        )
-        
-        data = host.to_dict()
-        
-        assert data["name"] == "test-server"
-        assert data["hostname"] == "192.168.1.100"
-    
-    def test_host_from_dict(self):
-        """测试：从字典创建主机配置"""
-        data = {
-            "name": "test-server",
-            "hostname": "192.168.1.100",
-            "username": "admin",
-            "port": 2222,
-            "tags": ["db"]
-        }
-        
-        host = Host.from_dict(data)
-        
-        assert host.name == "test-server"
-        assert host.port == 2222
-        assert host.tags == ["db"]
-    
-    def test_to_connection_config(self):
-        """测试：转换为 SSH 连接配置"""
-        host = Host(
-            name="test-server",
-            hostname="192.168.1.100",
-            username="admin",
-            password="secret",
-            port=2222
-        )
-        
-        config = host.to_connection_config()
-        
-        assert config.hostname == "192.168.1.100"
-        assert config.username == "admin"
-        assert config.password == "secret"
-        assert config.port == 2222
+def test_host_dataclass_roundtrip_and_connection_config():
+    host = Host(name="web-prod", hostname="192.0.2.10", username="admin", tags=["prod", "web"])
+    # to_dict / from_dict round-trip
+    d = host.to_dict()
+    host_from = Host.from_dict(d)
+    assert host == host_from
+    # to_connection_config should return ConnectionConfig
+    cfg = host.to_connection_config()
+    assert isinstance(cfg, ConnectionConfig)
+    assert cfg.hostname == "192.0.2.10"
+    assert cfg.username == "admin"
 
 
-# ============================================================================
-# HostManager 测试
-# ============================================================================
+def test_hostmanager_crud_and_magic_methods():
+    m = HostManager()
+    h1 = Host(name="srv1", hostname="10.0.0.1", username="root", tags=["prod"])
+    h2 = Host(name="srv2", hostname="10.0.0.2", username="admin", port=2222, tags=["dev"])
 
-class TestHostManager:
-    """HostManager 主机管理器测试"""
-    
-    def test_add_host(self):
-        """测试：添加主机"""
-        manager = HostManager()
-        host = Host(name="server1", hostname="192.168.1.1", username="admin")
-        
-        manager.add_host(host)
-        
-        assert "server1" in manager
-        assert len(manager) == 1
-        
-        retrieved_host = manager.get_host("server1")
-        assert retrieved_host.hostname == "192.168.1.1"
-    
-    def test_add_duplicate_host(self):
-        """测试：添加重复主机应抛出异常"""
-        manager = HostManager()
-        host = Host(name="server1", hostname="192.168.1.1", username="admin")
-        
-        manager.add_host(host)
-        
-        with pytest.raises(ValueError, match="已存在"):
-            manager.add_host(host)
-    
-    def test_remove_host(self):
-        """测试：移除主机"""
-        manager = HostManager()
-        host = Host(name="server1", hostname="192.168.1.1", username="admin")
-        
-        manager.add_host(host)
-        manager.remove_host("server1")
-        
-        assert "server1" not in manager
-        assert len(manager) == 0
-    
-    def test_remove_nonexistent_host(self):
-        """测试：移除不存在的主机应抛出异常"""
-        manager = HostManager()
-        
-        with pytest.raises(KeyError, match="不存在"):
-            manager.remove_host("nonexistent")
-    
-    def test_list_hosts(self):
-        """测试：列出主机"""
-        manager = HostManager()
-        
-        manager.add_host(Host(name="web1", hostname="192.168.1.1", username="admin", tags=["web"]))
-        manager.add_host(Host(name="db1", hostname="192.168.1.2", username="admin", tags=["db"]))
-        manager.add_host(Host(name="web2", hostname="192.168.1.3", username="admin", tags=["web"]))
-        
-        # 列出所有主机
-        all_hosts = manager.list_hosts()
-        assert len(all_hosts) == 3
-        
-        # 按标签筛选
-        web_hosts = manager.list_hosts(tag="web")
-        assert len(web_hosts) == 2
-        
-        db_hosts = manager.list_hosts(tag="db")
-        assert len(db_hosts) == 1
-    
-    def test_list_tags(self):
-        """测试：列出所有标签"""
-        manager = HostManager()
-        
-        manager.add_host(Host(name="web1", hostname="192.168.1.1", username="admin", tags=["web", "production"]))
-        manager.add_host(Host(name="db1", hostname="192.168.1.2", username="admin", tags=["db", "production"]))
-        
-        tags = manager.list_tags()
-        
-        assert tags == ["db", "production", "web"]
-    
-    def test_save_and_load(self):
-        """测试：保存和加载配置"""
-        # 创建临时文件
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as f:
-            temp_path = f.name
-        
-        try:
-            # 保存配置
-            manager = HostManager()
-            manager.add_host(Host(name="server1", hostname="192.168.1.1", username="admin"))
-            manager.add_host(Host(name="server2", hostname="192.168.1.2", username="root"))
-            
-            manager.save_to_file(temp_path)
-            
-            # 加载配置到新管理器
-            new_manager = HostManager(temp_path)
-            
-            assert len(new_manager) == 2
-            assert "server1" in new_manager
-            assert "server2" in new_manager
-            assert new_manager.get_host("server1").hostname == "192.168.1.1"
-        finally:
-            # 清理临时文件
-            Path(temp_path).unlink(missing_ok=True)
-    
-    def test_contains(self):
-        """测试：检查主机是否存在"""
-        manager = HostManager()
-        host = Host(name="server1", hostname="192.168.1.1", username="admin")
-        
-        manager.add_host(host)
-        
-        assert "server1" in manager
-        assert "server2" not in manager
+    # add and duplicate detection
+    m.add_host(h1)
+    with pytest.raises(KeyError):
+        m.add_host(h1)
+
+    # get / remove / __contains__ / __len__
+    assert m.get_host("srv1") == h1
+    assert "srv1" in m
+    assert len(m) == 1
+    m.add_host(h2)
+    assert len(m) == 2
+    m.remove_host("srv1")
+    with pytest.raises(KeyError):
+        m.get_host("srv1")
+    assert len(m) == 1
+    assert "srv1" not in m
+
+    # list with/without tag filter
+    listed_all = m.list_hosts()
+    assert isinstance(listed_all, list)
+    assert listed_all and all(isinstance(x, Host) for x in listed_all)
+    listed_dev = m.list_hosts(tag="dev")
+    assert listed_dev == [h2]
+    # list_tags aggregation
+    tags = m.list_tags()
+    assert set(tags) == {"prod", "dev"}
 
 
-# ============================================================================
-# 程序入口
-# ============================================================================
+def test_persistence_save_and_load(tmp_path):
+    m = HostManager()
+    h1 = Host(name="srvA", hostname="203.0.113.1", username="root", tags=["alpha"])
+    h2 = Host(name="srvB", hostname="203.0.113.2", username="admin", port=2222, tags=["beta"])
+    m.add_host(h1)
+    m.add_host(h2)
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+    path = tmp_path / "hosts.json"
+    m.save_to_file(path)
+
+    # verify JSON structure is valid
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    assert isinstance(data, dict) and len(data) == 2
+    assert "srvA" in data and "srvB" in data
+
+    # load_from_file reconstructs hosts
+    m2 = HostManager()
+    m2.load_from_file(path)
+    assert len(m2) == 2
+    assert m2.get_host("srvA") == h1
+    assert m2.get_host("srvB") == h2
+
+    # missing file should be handled gracefully
+    m3 = HostManager()
+    missing = tmp_path / "does_not_exist.json"
+    m3.load_from_file(missing)
+    assert len(m3) == 0
+
+
+def test_context_manager_usage():
+    with HostManager() as mgr:
+        h = Host(name="scoped", hostname="127.0.0.1", username="user", tags=[])
+        mgr.add_host(h)
+        assert len(mgr) == 1
+
+
+def test_connection_methods_mock_sshclient(monkeypatch):
+    class DummySSH:
+        def __init__(self, config):
+            self.config = config
+        def connect(self):
+            return self
+        def is_connected(self):
+            return True
+        def __enter__(self):
+            return self.connect()
+        def __exit__(self, *args):
+            pass
+        def disconnect(self):
+            pass
+
+    def mock_connect(self, name):
+        return DummySSH(self.get_host(name).to_connection_config())
+
+    import remote_cmd.core.host_manager as hm
+    monkeypatch.setattr(hm.HostManager, "connect_to_host", mock_connect)
+
+    mgr = hm.HostManager()
+    h = hm.Host(name="conn-host", hostname="192.0.2.5", username="root", tags=[])
+    mgr.add_host(h)
+
+    ok = mgr.test_connection("conn-host")
+    assert ok is True

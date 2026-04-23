@@ -33,6 +33,8 @@ setup(
         "click>=8.0.0",
         "pyyaml>=6.0",
         "colorama>=0.4.4; platform_system=='Windows'",
+        # Async file operations support
+        "aiofiles>=3.0.0",
     ],
     extras_require={
         "dev": [

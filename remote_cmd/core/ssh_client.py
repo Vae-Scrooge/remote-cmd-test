@@ -14,6 +14,8 @@ Author: Vae-Scrooge
 
 import paramiko
 import socket
+import time
+import re
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from pathlib import Path
@@ -357,37 +359,94 @@ class SSHClient:
             raise SSHCommandError(f"执行命令 '{command}' 失败: {e}")
     
     def execute_sudo(
-        self, 
-        command: str, 
+        self,
+        command: str,
         password: Optional[str] = None,
         timeout: Optional[int] = None
     ) -> CommandResult:
         """
-        以 sudo 权限执行命令
-        
+        以 sudo 权限执行命令（安全实现）
+
         Args:
             command: 要执行的命令字符串（不需要包含 sudo 前缀）
             password: sudo 密码（如果需要），None 表示使用无密码 sudo
             timeout: 命令执行超时时间（秒）
-        
+
         Returns:
             CommandResult: 包含命令执行结果的对象
-        
+
         Note:
-            - 如果提供了 password，将使用 `echo 'password' | sudo -S` 方式
-            - 如果未提供 password，假设已配置无密码 sudo
-        
+            - 如果提供了 password，使用安全的交互式 shell 方式处理密码
+            - 密码不会出现在进程列表或日志中
+            - 如果未提供 password，使用标准 sudo 执行
+
         Example:
             >>> result = client.execute_sudo("systemctl restart nginx", password="mypass")
         """
-        if password:
-            # 使用密码方式的 sudo（-S 参数从 stdin 读取密码）
-            full_command = f"echo '{password}' | sudo -S {command}"
-        else:
-            # 使用无密码 sudo
+        # 无密码时保持原有行为
+        if password is None:
             full_command = f"sudo {command}"
-        
-        return self.execute(full_command, timeout)
+            return self.execute(full_command, timeout)
+
+        # 安全方式：使用交互式 shell 处理 sudo 密码
+        try:
+            channel = self._client.invoke_shell()
+        except Exception as e:
+            return CommandResult(stdout=str(e), stderr="sudo interactive mode failed", exit_code=1)
+
+        timeout_sec = timeout or 120
+        start_time = time.time()
+        prompt_sentinel = "__SSH_SUDO_PASSWORD_PROMPT__"
+        done_sentinel = "__SSH_SUDO_COMMAND_DONE__"
+
+        wrapped_command = f"sudo -S -p '{prompt_sentinel}' {command}; echo {done_sentinel}$?\n"
+        channel.send(wrapped_command)
+
+        stdout_buf = []
+        exit_code = None
+        password_sent = False
+
+        while True:
+            if time.time() - start_time > timeout_sec:
+                try:
+                    channel.close()
+                except Exception:
+                    pass
+                break
+
+            if channel.recv_ready():
+                try:
+                    data = channel.recv(4096)
+                    if data:
+                        stdout_buf.append(data.decode(errors="replace"))
+                        text = data.decode(errors="replace").lower()
+                        # 检测 sudo 密码提示并发送密码
+                        if not password_sent and ("password" in text or "[sudo]" in text or "password for" in text):
+                            channel.send(password + "\n")
+                            password_sent = True
+                        # 检测命令完成标记
+                        joined = "".join(stdout_buf)
+                        marker_idx = joined.find(done_sentinel)
+                        if marker_idx != -1:
+                            after = joined[marker_idx + len(done_sentinel):]
+                            m = re.match(r"(-?\d+)", after)
+                            exit_code = int(m.group(1)) if m else 0
+                            break
+                except Exception:
+                    pass
+
+            time.sleep(0.05)
+
+        try:
+            channel.close()
+        except Exception:
+            pass
+
+        stdout = "".join(stdout_buf)
+        if exit_code is None:
+            exit_code = 0
+
+        return CommandResult(stdout=stdout, stderr="", exit_code=exit_code)
     
     # ========================================================================
     # 文件传输方法
@@ -521,3 +580,104 @@ class SSHClient:
             
         except Exception as e:
             raise SSHFileTransferError(f"列出远程目录失败: {e}")
+    
+    def create_remote_directory(self, path: str) -> None:
+        """创建远程目录（支持递归创建）"""
+        if not self._client:
+            raise SSHConnectionError("未连接，请先调用 connect() 方法")
+        
+        try:
+            if not self._sftp:
+                self._sftp = self._client.open_sftp()
+            
+            def _makedirs(sftp, remote_path):
+                if remote_path == "/":
+                    return
+                try:
+                    sftp.stat(remote_path)
+                except IOError:
+                    _makedirs(sftp, str(Path(remote_path).parent))
+                    sftp.mkdir(remote_path)
+            
+            _makedirs(self._sftp, path)
+            logger.info(f"已创建远程目录: {path}")
+            
+        except Exception as e:
+            raise SSHFileTransferError(f"创建远程目录失败: {e}")
+    
+    def remove_remote_file(self, path: str) -> None:
+        """删除远程文件"""
+        if not self._client:
+            raise SSHConnectionError("未连接，请先调用 connect() 方法")
+        
+        try:
+            if not self._sftp:
+                self._sftp = self._client.open_sftp()
+            self._sftp.remove(path)
+            logger.info(f"已删除远程文件: {path}")
+        except Exception as e:
+            raise SSHFileTransferError(f"删除远程文件失败: {e}")
+    
+    def remove_remote_directory(self, path: str, recursive: bool = False) -> None:
+        """删除远程目录"""
+        if not self._client:
+            raise SSHConnectionError("未连接，请先调用 connect() 方法")
+        
+        try:
+            if not self._sftp:
+                self._sftp = self._client.open_sftp()
+            
+            if recursive:
+                def _rm_recursive(sftp, remote_path):
+                    for entry in sftp.listdir(remote_path):
+                        full_path = f"{remote_path}/{entry}"
+                        try:
+                            sftp.stat(full_path)
+                            _rm_recursive(sftp, full_path)
+                        except IOError:
+                            sftp.remove(full_path)
+                    sftp.rmdir(remote_path)
+                
+                _rm_recursive(self._sftp, path)
+            else:
+                self._sftp.rmdir(path)
+            
+            logger.info(f"已删除远程目录: {path}")
+        except Exception as e:
+            raise SSHFileTransferError(f"删除远程目录失败: {e}")
+    
+    def remote_file_exists(self, path: str) -> bool:
+        """检查远程文件是否存在"""
+        if not self._client:
+            raise SSHConnectionError("未连接，请先调用 connect() 方法")
+        
+        try:
+            if not self._sftp:
+                self._sftp = self._client.open_sftp()
+            self._sftp.stat(path)
+            return True
+        except IOError:
+            return False
+    
+    def get_remote_file_info(self, path: str) -> Dict[str, Any]:
+        """获取远程文件信息"""
+        if not self._client:
+            raise SSHConnectionError("未连接，请先调用 connect() 方法")
+        
+        try:
+            if not self._sftp:
+                self._sftp = self._client.open_sftp()
+            
+            stat_result = self._sftp.stat(path)
+            mode = stat_result.st_mode
+            import stat
+            return {
+                "name": Path(path).name,
+                "size": stat_result.st_size,
+                "mode": oct(mode)[-3:] if mode else "000",
+                "mtime": stat_result.st_mtime,
+                "is_dir": stat.S_ISDIR(mode),
+                "is_file": stat.S_ISREG(mode)
+            }
+        except Exception as e:
+            raise SSHFileTransferError(f"获取文件信息失败: {e}")

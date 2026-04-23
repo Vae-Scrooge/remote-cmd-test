@@ -49,11 +49,14 @@ __license__ = "MIT"
 
 # 导出主要类，便于直接从包级别导入
 from remote_cmd.core.ssh_client import SSHClient
+from remote_cmd.core.async_client import AsyncSSHClient, ConnectionPool
 from remote_cmd.core.host_manager import HostManager
 
 # 定义公开 API
 __all__ = [
     "SSHClient",
+    "AsyncSSHClient",
+    "ConnectionPool",
     "HostManager",
     "__version__",
     "__author__",
