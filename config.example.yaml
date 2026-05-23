@@ -11,5 +11,8 @@ default_timeout: 30
 # Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL
 log_level: INFO
 
-# SSH key directory (optional)
-# ssh_key_dir: ~/.ssh
+# Host key policy: auto_add, warn (default), reject
+# - warn: 首次连接时显示警告（推荐）
+# - auto_add: 自动接受新主机密钥（注意：容易受到 MITM 攻击）
+# - reject: 严格验证，未知密钥拒绝连接
+# host_key_policy: warn

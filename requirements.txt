@@ -2,3 +2,4 @@ paramiko>=3.0.0
 click>=8.0.0
 pyyaml>=6.0
 colorama>=0.4.4; platform_system=="Windows"
+aiofiles>=3.0.0

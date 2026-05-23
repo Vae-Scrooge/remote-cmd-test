@@ -24,15 +24,21 @@ def test_hostmanager_crud_and_magic_methods():
 
     # add and duplicate detection
     m.add_host(h1)
-    with pytest.raises(KeyError):
+    with pytest.raises(ValueError):
         m.add_host(h1)
+
+    # list_tags before removal
+    tags = m.list_tags()
+    assert set(tags) == {"prod"}
+
+    m.add_host(h2)
+    assert len(m) == 2
+    tags = m.list_tags()
+    assert set(tags) == {"prod", "dev"}
 
     # get / remove / __contains__ / __len__
     assert m.get_host("srv1") == h1
     assert "srv1" in m
-    assert len(m) == 1
-    m.add_host(h2)
-    assert len(m) == 2
     m.remove_host("srv1")
     with pytest.raises(KeyError):
         m.get_host("srv1")
@@ -45,9 +51,9 @@ def test_hostmanager_crud_and_magic_methods():
     assert listed_all and all(isinstance(x, Host) for x in listed_all)
     listed_dev = m.list_hosts(tag="dev")
     assert listed_dev == [h2]
-    # list_tags aggregation
+    # list_tags after removal
     tags = m.list_tags()
-    assert set(tags) == {"prod", "dev"}
+    assert set(tags) == {"dev"}
 
 
 def test_persistence_save_and_load(tmp_path):

@@ -87,11 +87,12 @@ def host():
     """
     主机管理命令组
     
-    用于添加、删除、列出和测试远程主机连接。
+    用于添加、删除、列出、查看和测试远程主机连接。
     
     可用命令：
         add     添加新主机
         list    列出所有主机
+        show    查看主机详情
         remove  移除主机
         test    测试主机连接
     """
@@ -217,6 +218,42 @@ def host_remove(ctx, name: str):
         
         click.echo(f"✓ 主机 '{name}' 已移除")
         
+    except KeyError as e:
+        click.echo(f"✗ 错误: {e}", err=True)
+        sys.exit(1)
+
+
+@host.command("show")
+@click.argument("name", required=True)
+@click.pass_context
+def host_show(ctx, name: str):
+    """
+    显示主机详细信息
+
+    NAME: 主机名称
+
+    示例：
+        remote-cmd host show web-server
+    """
+    config_file = ctx.obj["config"].get("hosts_file", "hosts.json")
+    manager = HostManager(config_file)
+
+    try:
+        host = manager.get_host(name)
+        click.echo(f"\n{'=' * 50}")
+        click.echo(f"  主机详情: {host.name}")
+        click.echo(f"{'=' * 50}")
+        click.echo(f"  名称:      {host.name}")
+        click.echo(f"  主机地址:  {host.hostname}")
+        click.echo(f"  用户名:    {host.username}")
+        click.echo(f"  端口:      {host.port}")
+        click.echo(f"  认证方式:  {'密码' if host.password else 'SSH 密钥' if host.key_filename else 'SSH Agent'}")
+        if host.key_filename:
+            click.echo(f"  密钥路径:  {host.key_filename}")
+        tags_str = ", ".join(host.tags) if host.tags else "-"
+        click.echo(f"  标签:      {tags_str}")
+        click.echo(f"  描述:      {host.description or '-'}")
+        click.echo(f"{'=' * 50}\n")
     except KeyError as e:
         click.echo(f"✗ 错误: {e}", err=True)
         sys.exit(1)

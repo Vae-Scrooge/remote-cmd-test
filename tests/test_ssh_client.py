@@ -52,13 +52,16 @@ class TestConnectionConfig:
         
         assert config.key_filename == "~/.ssh/id_rsa"
     
-    def test_invalid_config_no_auth(self):
-        """测试：无认证方式时应抛出 ValueError"""
-        with pytest.raises(ValueError, match="password 或 key_filename"):
-            ConnectionConfig(
-                hostname="example.com",
-                username="admin"
-            )
+    def test_ssh_agent_config(self):
+        """测试：无密码和密钥时应使用 SSH Agent 认证"""
+        config = ConnectionConfig(
+            hostname="example.com",
+            username="admin"
+        )
+        assert config.hostname == "example.com"
+        assert config.username == "admin"
+        assert config.password is None
+        assert config.key_filename is None
 
 
 # ============================================================================

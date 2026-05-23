@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional
 from dataclasses import dataclass, asdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 
 from remote_cmd.core.ssh_client import SSHClient, ConnectionConfig
@@ -190,6 +191,35 @@ class HostManager:
         self.hosts[host.name] = host
         logger.info(f"已添加主机: {host.name}")
     
+    def update_host(self, name: str, **kwargs) -> Host:
+        """
+        更新指定主机的配置属性
+
+        Args:
+            name: 主机名称
+            **kwargs: 要更新的属性（hostname, username, port, password,
+                      key_filename, tags, description 等）
+
+        Returns:
+            Host: 更新后的主机配置对象
+
+        Raises:
+            KeyError: 如果指定的主机不存在
+
+        Example:
+            >>> manager.update_host("web-server", port=2222, tags=["web", "prod"])
+        """
+        if name not in self.hosts:
+            raise KeyError(f"主机 '{name}' 不存在")
+
+        host = self.hosts[name]
+        for key, value in kwargs.items():
+            if hasattr(host, key):
+                setattr(host, key, value)
+
+        logger.info(f"已更新主机: {name}")
+        return self.hosts[name]
+
     def remove_host(self, name: str) -> None:
         """
         从管理器中移除主机
@@ -385,32 +415,56 @@ class HostManager:
             logger.error(f"主机 {name} 连接测试失败: {e}")
             return False
     
-    def test_all_connections(self) -> Dict[str, bool]:
+    def test_all_connections(self, max_workers: int = 10) -> Dict[str, bool]:
         """
-        测试所有主机的连接状态
-        
+        并行测试所有主机的连接状态
+
+        Args:
+            max_workers: 最大并发连接数，默认 10
+
         Returns:
             Dict[str, bool]: 主机名称到连接状态的映射字典
-        
+
         Example:
             >>> results = manager.test_all_connections()
             >>> for name, success in results.items():
             ...     status = "✓" if success else "✗"
             ...     print(f"{status} {name}")
         """
-        results = {}
-        for name in self.hosts:
-            results[name] = self.test_connection(name)
+        results: Dict[str, bool] = {}
+        host_names = list(self.hosts.keys())
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_map = {
+                executor.submit(self.test_connection, name): name
+                for name in host_names
+            }
+            for future in as_completed(future_map):
+                name = future_map[future]
+                try:
+                    results[name] = future.result()
+                except Exception as e:
+                    logger.error(f"主机 {name} 连接测试异常: {e}")
+                    results[name] = False
+
         return results
     
     # ========================================================================
     # 魔术方法
     # ========================================================================
     
+    def __enter__(self) -> "HostManager":
+        """上下文管理器入口"""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        """上下文管理器出口"""
+        pass
+
     def __len__(self) -> int:
         """返回管理的主机数量"""
         return len(self.hosts)
-    
+
     def __contains__(self, name: str) -> bool:
         """检查指定名称的主机是否存在"""
         return name in self.hosts

@@ -14,12 +14,11 @@ Author: Vae-Scrooge
 
 import paramiko
 import socket
-import time
-import re
-from typing import Optional, List, Dict, Any
-from dataclasses import dataclass
-from pathlib import Path
+import stat
 import logging
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Optional, List, Dict, Any
 
 from remote_cmd.utils.exceptions import SSHConnectionError, SSHCommandError, SSHFileTransferError
 
@@ -37,19 +36,24 @@ class ConnectionConfig:
     SSH 连接配置类
     
     用于存储和管理 SSH 连接所需的所有参数。
-    支持密码认证和 SSH 密钥认证两种方式。
+    支持密码认证、SSH 密钥认证和 SSH Agent 三种方式。
     
     Attributes:
         hostname: 目标主机地址（IP 或域名）
         username: SSH 登录用户名
         port: SSH 端口号，默认为 22
-        password: 登录密码（可选，与 key_filename 二选一）
-        key_filename: SSH 私钥文件路径（可选，与 password 二选一）
+        password: 登录密码（可选）
+        key_filename: SSH 私钥文件路径（可选）
         timeout: 连接超时时间（秒），默认 30 秒
         compress: 是否启用压缩，默认启用
+        host_key_policy: 主机密钥验证策略，默认 WarningPolicy。
+                        可设为 paramiko.AutoAddPolicy() 自动接受新主机密钥，
+                        或 paramiko.RejectPolicy() 严格验证。
+                         警告: AutoAddPolicy 容易受到 MITM 攻击！
     
-    Raises:
-        ValueError: 当既没有提供 password 也没有提供 key_filename 时抛出
+    Note:
+        - password 和 key_filename 可以同时为 None，此时使用 SSH Agent 认证
+        - 生产环境建议使用 SSH 密钥或 Agent 认证，避免明文密码
     """
     
     hostname: str
@@ -59,11 +63,11 @@ class ConnectionConfig:
     key_filename: Optional[str] = None
     timeout: int = 30
     compress: bool = True
+    host_key_policy: Any = field(default_factory=lambda: paramiko.WarningPolicy())
     
     def __post_init__(self):
-        """初始化后验证：确保至少提供一种认证方式"""
-        if not self.password and not self.key_filename:
-            raise ValueError("必须提供 password 或 key_filename 其中一种认证方式")
+        """初始化后验证：密码和密钥文件至少有一个，或者使用 SSH Agent"""
+        # password 和 key_filename 可以同时为 None，此时使用 SSH Agent
 
 
 @dataclass
@@ -179,8 +183,8 @@ class SSHClient:
             # 创建 SSH 客户端实例
             self._client = paramiko.SSHClient()
             
-            # 设置主机密钥策略：自动添加新主机密钥（生产环境建议使用更严格的策略）
-            self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            # 设置主机密钥策略（默认为 WarningPolicy，生产环境建议使用 RejectPolicy）
+            self._client.set_missing_host_key_policy(self.config.host_key_policy)
             
             # 构建连接参数字典
             connect_kwargs = {
@@ -263,6 +267,14 @@ class SSHClient:
         except Exception:
             return False
     
+    def _get_sftp(self) -> paramiko.SFTPClient:
+        """获取 SFTP 客户端（延迟初始化）"""
+        if not self._client:
+            raise SSHConnectionError("未连接，请先调用 connect() 方法")
+        if not self._sftp:
+            self._sftp = self._client.open_sftp()
+        return self._sftp
+
     # ========================================================================
     # 上下文管理器支持
     # ========================================================================
@@ -355,7 +367,7 @@ class SSHClient:
             logger.debug(f"命令执行完成，退出码: {exit_code}")
             return result
             
-        except Exception as e:
+        except (paramiko.SSHException, OSError) as e:
             raise SSHCommandError(f"执行命令 '{command}' 失败: {e}")
     
     def execute_sudo(
@@ -376,77 +388,41 @@ class SSHClient:
             CommandResult: 包含命令执行结果的对象
 
         Note:
-            - 如果提供了 password，使用安全的交互式 shell 方式处理密码
+            - 如果提供了 password，使用 exec_command + -S 从 stdin 传入密码
             - 密码不会出现在进程列表或日志中
-            - 如果未提供 password，使用标准 sudo 执行
+            - stdout 和 stderr 保持独立分离
 
         Example:
             >>> result = client.execute_sudo("systemctl restart nginx", password="mypass")
         """
-        # 无密码时保持原有行为
+        if not self._client:
+            raise SSHConnectionError("未连接，请先调用 connect() 方法")
+
         if password is None:
             full_command = f"sudo {command}"
             return self.execute(full_command, timeout)
 
-        # 安全方式：使用交互式 shell 处理 sudo 密码
+        # 使用 exec_command + sudo -S 从 stdin 传入密码，保持 stdout/stderr 分离
         try:
-            channel = self._client.invoke_shell()
-        except Exception as e:
-            return CommandResult(stdout=str(e), stderr="sudo interactive mode failed", exit_code=1)
+            full_command = f"sudo -S {command}"
+            stdin, stdout, stderr = self._client.exec_command(
+                full_command, timeout=timeout, get_pty=True
+            )
+            stdin.write(password + "\n")
+            stdin.flush()
 
-        timeout_sec = timeout or 120
-        start_time = time.time()
-        prompt_sentinel = "__SSH_SUDO_PASSWORD_PROMPT__"
-        done_sentinel = "__SSH_SUDO_COMMAND_DONE__"
+            exit_code = stdout.channel.recv_exit_status()
+            stdout_data = stdout.read().decode("utf-8", errors="replace")
+            stderr_data = stderr.read().decode("utf-8", errors="replace")
 
-        wrapped_command = f"sudo -S -p '{prompt_sentinel}' {command}; echo {done_sentinel}$?\n"
-        channel.send(wrapped_command)
-
-        stdout_buf = []
-        exit_code = None
-        password_sent = False
-
-        while True:
-            if time.time() - start_time > timeout_sec:
-                try:
-                    channel.close()
-                except Exception:
-                    pass
-                break
-
-            if channel.recv_ready():
-                try:
-                    data = channel.recv(4096)
-                    if data:
-                        stdout_buf.append(data.decode(errors="replace"))
-                        text = data.decode(errors="replace").lower()
-                        # 检测 sudo 密码提示并发送密码
-                        if not password_sent and ("password" in text or "[sudo]" in text or "password for" in text):
-                            channel.send(password + "\n")
-                            password_sent = True
-                        # 检测命令完成标记
-                        joined = "".join(stdout_buf)
-                        marker_idx = joined.find(done_sentinel)
-                        if marker_idx != -1:
-                            after = joined[marker_idx + len(done_sentinel):]
-                            m = re.match(r"(-?\d+)", after)
-                            exit_code = int(m.group(1)) if m else 0
-                            break
-                except Exception:
-                    pass
-
-            time.sleep(0.05)
-
-        try:
-            channel.close()
-        except Exception:
-            pass
-
-        stdout = "".join(stdout_buf)
-        if exit_code is None:
-            exit_code = 0
-
-        return CommandResult(stdout=stdout, stderr="", exit_code=exit_code)
+            return CommandResult(
+                command=command,
+                stdout=stdout_data,
+                stderr=stderr_data,
+                exit_code=exit_code
+            )
+        except paramiko.SSHException as e:
+            raise SSHCommandError(f"执行 sudo 命令 '{command}' 失败: {e}")
     
     # ========================================================================
     # 文件传输方法
@@ -467,26 +443,19 @@ class SSHClient:
         Example:
             >>> client.upload_file("./script.sh", "/home/user/script.sh")
         """
-        # 检查连接状态
-        if not self._client:
-            raise SSHConnectionError("未连接，请先调用 connect() 方法")
-        
+        sftp = self._get_sftp()
+
+        # 验证本地文件存在
+        local_file = Path(local_path)
+        if not local_file.exists():
+            raise SSHFileTransferError(f"本地文件不存在: {local_path}")
+
+        # 执行上传
         try:
-            # 延迟初始化 SFTP
-            if not self._sftp:
-                self._sftp = self._client.open_sftp()
-            
-            # 验证本地文件存在
-            local_file = Path(local_path)
-            if not local_file.exists():
-                raise SSHFileTransferError(f"本地文件不存在: {local_path}")
-            
-            # 执行上传
             logger.info(f"上传文件: {local_path} -> {remote_path}")
-            self._sftp.put(str(local_file), remote_path)
+            sftp.put(str(local_file), remote_path)
             logger.info("文件上传完成")
-            
-        except Exception as e:
+        except (paramiko.SSHException, IOError, OSError) as e:
             raise SSHFileTransferError(f"文件上传失败: {e}")
     
     def download_file(self, remote_path: str, local_path: str) -> None:
@@ -507,25 +476,18 @@ class SSHClient:
         Example:
             >>> client.download_file("/var/log/syslog", "./logs/syslog")
         """
-        # 检查连接状态
-        if not self._client:
-            raise SSHConnectionError("未连接，请先调用 connect() 方法")
-        
+        sftp = self._get_sftp()
+
+        # 确保本地目录存在
+        local_file = Path(local_path)
+        local_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # 执行下载
         try:
-            # 延迟初始化 SFTP
-            if not self._sftp:
-                self._sftp = self._client.open_sftp()
-            
-            # 确保本地目录存在
-            local_file = Path(local_path)
-            local_file.parent.mkdir(parents=True, exist_ok=True)
-            
-            # 执行下载
             logger.info(f"下载文件: {remote_path} -> {local_path}")
-            self._sftp.get(remote_path, str(local_file))
+            sftp.get(remote_path, str(local_file))
             logger.info("文件下载完成")
-            
-        except Exception as e:
+        except (paramiko.SSHException, IOError, OSError) as e:
             raise SSHFileTransferError(f"文件下载失败: {e}")
     
     def list_remote_directory(self, remote_path: str = ".") -> List[Dict[str, Any]]:
@@ -552,125 +514,98 @@ class SSHClient:
             >>> for entry in entries:
             ...     print(f"{entry['name']}: {entry['size']} bytes")
         """
-        # 检查连接状态
-        if not self._client:
-            raise SSHConnectionError("未连接，请先调用 connect() 方法")
-        
+        sftp = self._get_sftp()
+
         try:
-            # 延迟初始化 SFTP
-            if not self._sftp:
-                self._sftp = self._client.open_sftp()
-            
-            # 获取目录内容
             entries = []
-            for entry in self._sftp.listdir_attr(remote_path):
-                # 安全获取文件模式
+            for entry in sftp.listdir_attr(remote_path):
                 mode = entry.st_mode if entry.st_mode is not None else 0
-                
-                # 构建目录项信息字典
                 entries.append({
                     "name": entry.filename,
                     "size": entry.st_size,
                     "mode": oct(mode)[-3:] if mode else "000",
                     "mtime": entry.st_mtime,
-                    "is_dir": bool(mode & 0o40000) if mode else False  # 检查目录标志位
+                    "is_dir": bool(mode & stat.S_IFDIR) if mode else False,
                 })
-            
             return entries
-            
-        except Exception as e:
+        except (paramiko.SSHException, IOError, OSError) as e:
             raise SSHFileTransferError(f"列出远程目录失败: {e}")
     
     def create_remote_directory(self, path: str) -> None:
         """创建远程目录（支持递归创建）"""
-        if not self._client:
-            raise SSHConnectionError("未连接，请先调用 connect() 方法")
-        
+        sftp = self._get_sftp()
+
+        def _makedirs(sftp_client, remote_path):
+            if remote_path == "/":
+                return
+            try:
+                sftp_client.stat(remote_path)
+            except IOError:
+                _makedirs(sftp_client, str(Path(remote_path).parent))
+                sftp_client.mkdir(remote_path)
+
         try:
-            if not self._sftp:
-                self._sftp = self._client.open_sftp()
-            
-            def _makedirs(sftp, remote_path):
-                if remote_path == "/":
-                    return
-                try:
-                    sftp.stat(remote_path)
-                except IOError:
-                    _makedirs(sftp, str(Path(remote_path).parent))
-                    sftp.mkdir(remote_path)
-            
-            _makedirs(self._sftp, path)
+            _makedirs(sftp, path)
             logger.info(f"已创建远程目录: {path}")
-            
-        except Exception as e:
+        except (paramiko.SSHException, IOError, OSError) as e:
             raise SSHFileTransferError(f"创建远程目录失败: {e}")
     
     def remove_remote_file(self, path: str) -> None:
         """删除远程文件"""
-        if not self._client:
-            raise SSHConnectionError("未连接，请先调用 connect() 方法")
-        
+        sftp = self._get_sftp()
         try:
-            if not self._sftp:
-                self._sftp = self._client.open_sftp()
-            self._sftp.remove(path)
+            sftp.remove(path)
             logger.info(f"已删除远程文件: {path}")
-        except Exception as e:
+        except (paramiko.SSHException, IOError, OSError) as e:
             raise SSHFileTransferError(f"删除远程文件失败: {e}")
-    
+
     def remove_remote_directory(self, path: str, recursive: bool = False) -> None:
         """删除远程目录"""
-        if not self._client:
-            raise SSHConnectionError("未连接，请先调用 connect() 方法")
-        
+        sftp = self._get_sftp()
+
+        def _rm_recursive(sftp_client, remote_path):
+            """递归删除目录内容，先收集后删除以避免不一致状态"""
+            entries = []
+            try:
+                for entry in sftp_client.listdir_attr(remote_path):
+                    entries.append((entry.filename, bool(entry.st_mode & stat.S_IFDIR)))
+            except IOError:
+                return
+            # 先删除文件，再递归删除子目录
+            for name, is_dir in entries:
+                full_path = f"{remote_path}/{name}"
+                if is_dir:
+                    _rm_recursive(sftp_client, full_path)
+                else:
+                    sftp_client.remove(full_path)
+            sftp_client.rmdir(remote_path)
+
         try:
-            if not self._sftp:
-                self._sftp = self._client.open_sftp()
-            
             if recursive:
-                def _rm_recursive(sftp, remote_path):
-                    for entry in sftp.listdir(remote_path):
-                        full_path = f"{remote_path}/{entry}"
-                        try:
-                            sftp.stat(full_path)
-                            _rm_recursive(sftp, full_path)
-                        except IOError:
-                            sftp.remove(full_path)
-                    sftp.rmdir(remote_path)
-                
-                _rm_recursive(self._sftp, path)
+                _rm_recursive(sftp, path)
             else:
-                self._sftp.rmdir(path)
-            
+                sftp.rmdir(path)
             logger.info(f"已删除远程目录: {path}")
-        except Exception as e:
+        except (paramiko.SSHException, IOError, OSError) as e:
             raise SSHFileTransferError(f"删除远程目录失败: {e}")
     
     def remote_file_exists(self, path: str) -> bool:
         """检查远程文件是否存在"""
-        if not self._client:
-            raise SSHConnectionError("未连接，请先调用 connect() 方法")
-        
         try:
-            if not self._sftp:
-                self._sftp = self._client.open_sftp()
-            self._sftp.stat(path)
+            sftp = self._get_sftp()
+            sftp.stat(path)
             return True
         except IOError:
             return False
-    
+        except SSHConnectionError:
+            return False
+
     def get_remote_file_info(self, path: str) -> Dict[str, Any]:
         """获取远程文件信息"""
-        if not self._client:
-            raise SSHConnectionError("未连接，请先调用 connect() 方法")
-        
+        sftp = self._get_sftp()
         try:
-            if not self._sftp:
-                self._sftp = self._client.open_sftp()
-            
-            stat_result = self._sftp.stat(path)
+            stat_result = sftp.stat(path)
             mode = stat_result.st_mode
-            import stat
             return {
                 "name": Path(path).name,
                 "size": stat_result.st_size,
@@ -679,5 +614,5 @@ class SSHClient:
                 "is_dir": stat.S_ISDIR(mode),
                 "is_file": stat.S_ISREG(mode)
             }
-        except Exception as e:
+        except (paramiko.SSHException, IOError, OSError) as e:
             raise SSHFileTransferError(f"获取文件信息失败: {e}")

@@ -47,6 +47,10 @@ __author__ = "Vae-Scrooge"
 __email__ = "vae-scrooge@example.com"
 __license__ = "MIT"
 
+# 配置包级别日志（默认不输出，由应用层决定日志级别和处理方式）
+import logging
+logging.getLogger(__name__).addHandler(logging.NullHandler())
+
 # 导出主要类，便于直接从包级别导入
 from remote_cmd.core.ssh_client import SSHClient
 from remote_cmd.core.async_client import AsyncSSHClient, ConnectionPool

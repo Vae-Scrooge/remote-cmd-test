@@ -44,7 +44,7 @@ jobs:
     
     - name: Check code formatting with black
       run: |
-        black --check remote_cmd tests || true
+        black --check remote_cmd tests
     
     - name: Run tests with pytest
       run: |
