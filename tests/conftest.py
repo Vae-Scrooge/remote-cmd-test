@@ -79,14 +79,3 @@ def temp_json_path(tmp_path):
 # ============================================================================
 # 异步测试辅助
 # ============================================================================
-
-
-@pytest.fixture
-def event_loop():
-    """为异步测试提供事件循环"""
-    import asyncio
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()

@@ -43,12 +43,7 @@ def config():
     return ConnectionConfig(hostname="test-host", username="test-user")
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
+pytestmark = pytest.mark.asyncio(loop_scope="module")
 
 
 class TestConnectionPool:
