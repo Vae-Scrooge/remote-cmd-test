@@ -4,7 +4,7 @@ with open("README.md", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="remote-cmd",
+    name="remote_cmd_manager",
     version="1.0.0",
     author="Vae-Scrooge",
     author_email="vaescrooge@gmail.com",
@@ -12,7 +12,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/Vae-Scrooge/remote-cmd-test",
-    download_url="https://pypi.org/project/remote-cmd/",
+    download_url="https://pypi.org/project/remote_cmd_manager/",
     project_urls={
         "Source Code": "https://github.com/Vae-Scrooge/remote-cmd-test",
         "Bug Tracker": "https://github.com/Vae-Scrooge/remote-cmd-test/issues",

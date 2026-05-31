@@ -4,8 +4,8 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![PyPI version](https://img.shields.io/pypi/v/remote-cmd)](https://pypi.org/project/remote-cmd/)
-[![PyPI downloads](https://img.shields.io/pypi/dm/remote-cmd)](https://pypi.org/project/remote-cmd/)
+[![PyPI version](https://img.shields.io/pypi/v/remote_cmd_manager)](https://pypi.org/project/remote_cmd_manager/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/remote_cmd_manager)](https://pypi.org/project/remote_cmd_manager/)
 [![Code Style](https://img.shields.io/badge/code%20style-black-black)](https://github.com/psf/black)
 [![Build Status](https://github.com/Vae-Scrooge/remote-cmd-test/workflows/CI/badge.svg)](https://github.com/Vae-Scrooge/remote-cmd-test/actions)
 [![Documentation](https://img.shields.io/badge/docs-complete-brightgreen)](./docs)
@@ -13,7 +13,7 @@
 **A lightweight Python SSH remote server management tool for developers and sysadmins.**
 
 ```bash
-pip install remote-cmd
+pip install remote_cmd_manager
 ```
 
 [快速开始](#快速开始) | [安装指南](#安装指南) | [使用文档](#详细使用说明) | [API 文档](./docs/API.md) | [开发指南](./docs/DEVELOPMENT.md) | [故障排查](./docs/TROUBLESHOOTING.md)
@@ -62,7 +62,7 @@ Remote CMD 是一个基于 Python 3.8+ 开发的 SSH 远程服务器管理工具
 - **安全可靠**：支持密码和 SSH Key 两种认证方式
 - **扩展性强**：清晰的模块化设计，易于扩展和二次开发
 - **文档完善**：详细的文档和丰富的示例，降低学习成本
-- **安装便捷**：一行命令 `pip install remote-cmd` 即可安装
+- **安装便捷**：一行命令 `pip install remote_cmd_manager` 即可安装
 
 ---
 
@@ -186,7 +186,7 @@ Remote CMD 是一个基于 Python 3.8+ 开发的 SSH 远程服务器管理工具
 #### 方式 1：从 PyPI 安装（推荐）
 
 ```bash
-pip install remote-cmd
+pip install remote_cmd_manager
 ```
 
 #### 方式 2：从源代码安装（开发者）
@@ -632,7 +632,7 @@ if __name__ == "__main__":
 
 - GitHub: [@Vae-Scrooge](https://github.com/Vae-Scrooge)
 - 项目主页: https://github.com/Vae-Scrooge/remote-cmd-test
-- PyPI: https://pypi.org/project/remote-cmd/
+- PyPI: https://pypi.org/project/remote_cmd_manager/
 
 ---
 
