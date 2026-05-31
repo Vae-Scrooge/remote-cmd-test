@@ -34,7 +34,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -e .
-        pip install pytest pytest-cov black ruff mypy pre-commit types-setuptools types-paramiko
+        pip install pytest pytest-cov black ruff "mypy==1.10.0" pre-commit types-setuptools types-paramiko
     
     - name: Lint with ruff
       run: |
@@ -44,23 +44,8 @@ jobs:
       run: |
         ruff format remote_cmd tests --check
     
-    - name: Debug mypy install
-      run: |
-        python -m mypy --version
-        pip show mypy 2>/dev/null || true
-    
     - name: Type check with mypy
-      run: |
-        set -x
-        echo "=== mypy version ==="
-        python -m mypy --version
-        echo "=== config ==="
-        cat pyproject.toml | grep -A 20 "\[tool.mypy\]" || true
-        echo "=== running mypy ==="
-        python -m mypy remote_cmd --no-strict-optional --ignore-missing-imports 2>&1
-        rc=$?
-        echo "=== exit code: $rc ==="
-        exit $rc
+      run: mypy remote_cmd --no-strict-optional --ignore-missing-imports
     
     - name: Run tests with pytest
       run: |
