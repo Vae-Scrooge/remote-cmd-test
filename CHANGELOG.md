@@ -3,7 +3,19 @@
 所有 notable 的更改都将记录在此文件中。
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
-并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
+并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/).
+
+## [1.0.0] - 2026-05-31
+
+### Added
+- 发布到 PyPI，支持 `pip install remote-cmd`
+- 添加 PyPI 版本和下载量 badge
+- README 添加英文简介，方便海外用户
+- setup.py 添加 PyPI 下载链接和项目 URL
+
+### Changed
+- 安装方式优化：pip install 成为首选安装方式
+- README 结构调整，更清晰的安装指引
 
 ## [Unreleased]
 

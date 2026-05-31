@@ -7,11 +7,17 @@ setup(
     name="remote-cmd",
     version="1.0.0",
     author="Vae-Scrooge",
-    author_email="your.email@example.com",
+    author_email="vaescrooge@gmail.com",
     description="A Python-based SSH remote server management tool",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/Vae-Scrooge/remote-cmd-test",
+    download_url="https://pypi.org/project/remote-cmd/",
+    project_urls={
+        "Source Code": "https://github.com/Vae-Scrooge/remote-cmd-test",
+        "Bug Tracker": "https://github.com/Vae-Scrooge/remote-cmd-test/issues",
+        "Documentation": "https://github.com/Vae-Scrooge/remote-cmd-test#readme",
+    },
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -26,6 +32,7 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Topic :: System :: Systems Administration",
         "Topic :: Utilities",
+        "Environment :: Console",
     ],
     python_requires=">=3.8",
     install_requires=[
@@ -33,7 +40,6 @@ setup(
         "click>=8.0.0",
         "pyyaml>=6.0",
         "colorama>=0.4.4; platform_system=='Windows'",
-        # Async file operations support
         "aiofiles>=3.0.0",
     ],
     extras_require={

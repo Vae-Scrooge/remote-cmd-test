@@ -4,15 +4,33 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![PyPI version](https://img.shields.io/pypi/v/remote-cmd)](https://pypi.org/project/remote-cmd/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/remote-cmd)](https://pypi.org/project/remote-cmd/)
 [![Code Style](https://img.shields.io/badge/code%20style-black-black)](https://github.com/psf/black)
 [![Build Status](https://github.com/Vae-Scrooge/remote-cmd-test/workflows/CI/badge.svg)](https://github.com/Vae-Scrooge/remote-cmd-test/actions)
 [![Documentation](https://img.shields.io/badge/docs-complete-brightgreen)](./docs)
 
-**一个简单而强大的 Python SSH 远程服务器管理工具，专为开发者和系统管理员设计。**
+**A lightweight Python SSH remote server management tool for developers and sysadmins.**
+
+```bash
+pip install remote-cmd
+```
 
 [快速开始](#快速开始) | [安装指南](#安装指南) | [使用文档](#详细使用说明) | [API 文档](./docs/API.md) | [开发指南](./docs/DEVELOPMENT.md) | [故障排查](./docs/TROUBLESHOOTING.md)
 
 </div>
+
+---
+
+Remote CMD is a Python-based SSH tool that helps you manage remote servers from the command line or your own Python scripts. Built on Paramiko, it supports password and SSH key auth, remote command execution, file transfer (SFTP), multi-host tagging, and batch operations — all without needing Ansible or other heavy orchestration tools.
+
+```python
+from remote_cmd.core.ssh_client import SSHClient, ConnectionConfig
+
+with SSHClient(ConnectionConfig(hostname="192.168.1.100", username="ubuntu", password="yourpassword")) as client:
+    result = client.execute("uptime")
+    print(result.stdout)
+```
 
 ---
 
@@ -44,6 +62,7 @@ Remote CMD 是一个基于 Python 3.8+ 开发的 SSH 远程服务器管理工具
 - **安全可靠**：支持密码和 SSH Key 两种认证方式
 - **扩展性强**：清晰的模块化设计，易于扩展和二次开发
 - **文档完善**：详细的文档和丰富的示例，降低学习成本
+- **安装便捷**：一行命令 `pip install remote-cmd` 即可安装
 
 ---
 
@@ -164,65 +183,31 @@ Remote CMD 是一个基于 Python 3.8+ 开发的 SSH 远程服务器管理工具
 
 ### 安装步骤
 
-#### 方式 1：从源代码安装（推荐开发者）
+#### 方式 1：从 PyPI 安装（推荐）
 
 ```bash
-# 1. 克隆仓库
-git clone https://github.com/Vae-Scrooge/remote-cmd-test.git
-cd remote-cmd-test
-
-# 2. 创建虚拟环境（强烈推荐）
-python -m venv venv
-
-# 3. 激活虚拟环境
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-
-# 4. 安装依赖
-pip install -r requirements.txt
-
-# 5. 验证安装
-python -m remote_cmd --version
+pip install remote-cmd
 ```
 
-#### 方式 2：作为包安装（推荐用户）
+#### 方式 2：从源代码安装（开发者）
 
 ```bash
-# 1. 克隆仓库
 git clone https://github.com/Vae-Scrooge/remote-cmd-test.git
 cd remote-cmd-test
-
-# 2. 安装包
 pip install -e .
-
-# 3. 验证安装
-remote-cmd --version
 ```
 
 #### 方式 3：开发模式安装
 
 ```bash
-# 安装开发依赖
 pip install -e ".[dev]"
 ```
 
-### 依赖说明
+### 验证安装
 
-**核心依赖：**
-- `paramiko>=3.0.0` - SSH 协议实现
-- `click>=8.0.0` - 命令行界面
-- `pyyaml>=6.0` - YAML 配置文件支持
-
-**可选依赖：**
-- `colorama>=0.4.4` - Windows 终端颜色支持
-
-**开发依赖：**
-- `pytest>=7.0.0` - 单元测试
-- `pytest-cov>=4.0.0` - 测试覆盖率
-- `black>=22.0.0` - 代码格式化
-- `flake8>=5.0.0` - 代码检查
+```bash
+remote-cmd --version
+```
 
 ---
 
@@ -323,8 +308,7 @@ python -m remote_cmd host remove my-server
 # 测试单个主机
 python -m remote_cmd host test my-server
 
-# 测试所有主机
-# （通过脚本实现，见示例）
+# 测试所有主机（通过脚本实现，见示例）
 ```
 
 ### 命令执行
@@ -648,6 +632,7 @@ if __name__ == "__main__":
 
 - GitHub: [@Vae-Scrooge](https://github.com/Vae-Scrooge)
 - 项目主页: https://github.com/Vae-Scrooge/remote-cmd-test
+- PyPI: https://pypi.org/project/remote-cmd/
 
 ---
 
