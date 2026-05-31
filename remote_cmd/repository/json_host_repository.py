@@ -9,8 +9,8 @@ JSON 文件主机仓库实现
 """
 
 import json
-import os
 import logging
+import os
 import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -113,7 +113,7 @@ class JsonHostRepository(HostRepository):
     def _load(self) -> None:
         """从 JSON 文件加载主机配置"""
         try:
-            with open(self._filepath, "r", encoding="utf-8") as f:
+            with open(self._filepath, encoding="utf-8") as f:
                 raw = json.load(f)
         except (json.JSONDecodeError, FileNotFoundError) as e:
             logger.warning(f"加载配置文件失败: {e}")

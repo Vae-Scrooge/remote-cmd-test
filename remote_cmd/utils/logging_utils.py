@@ -12,13 +12,12 @@
     - 错误消息中的密码使用 [REDACTED] 替换
 """
 
-import os
+import logging
 import re
 import sys
-import logging
-from pathlib import Path
 from logging.handlers import RotatingFileHandler
-from typing import Optional, Dict, Any
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 # ============================================================================
 # 敏感数据脱敏过滤器
@@ -38,7 +37,9 @@ def redact_sensitive_data(message: str) -> str:
     替换密码等字段的值为 [REDACTED]。
     """
     return SENSITIVE_PATTERN.sub(
-        lambda m: f"{m.group(0).split('=')[0] if '=' in m.group(0) else m.group(0).split(':')[0]}={'[REDACTED]' if '=' in m.group(0) else ': [REDACTED]'}",
+        lambda m: (
+            f"{m.group(0).split('=')[0] if '=' in m.group(0) else m.group(0).split(':')[0]}={'[REDACTED]' if '=' in m.group(0) else ': [REDACTED]'}"
+        ),
         message,
     )
 
@@ -56,8 +57,7 @@ class SensitiveDataFilter(logging.Filter):
         if record.args:
             # 处理 %s 格式的参数
             cleaned_args = tuple(
-                redact_sensitive_data(str(a)) if isinstance(a, str) else a
-                for a in record.args
+                redact_sensitive_data(str(a)) if isinstance(a, str) else a for a in record.args
             )
             record.args = cleaned_args
         return True
@@ -80,8 +80,8 @@ class SensitiveDataFilter(logging.Filter):
 # 日志格式
 # ============================================================================
 
-DEFAULT_FORMAT = "[%(asctime)s] %(levelname)-8s %(name)s:%(lineno)d " "- %(message)s"
-VERBOSE_FORMAT = "[%(asctime)s] %(levelname)-8s %(name)s:%(lineno)d " "- %(message)s"
+DEFAULT_FORMAT = "[%(asctime)s] %(levelname)-8s %(name)s:%(lineno)d - %(message)s"
+VERBOSE_FORMAT = "[%(asctime)s] %(levelname)-8s %(name)s:%(lineno)d - %(message)s"
 STRUCTURED_FORMAT = (
     '{"time":"%(asctime)s","level":"%(levelname)s",'
     '"module":"%(name)s","line":%(lineno)d,'
@@ -152,9 +152,7 @@ def setup_logging(
         root_logger.addHandler(file_handler)
 
     # 配置 remote_cmd 包日志
-    logging.getLogger("remote_cmd").setLevel(
-        getattr(logging, level.upper(), logging.INFO)
-    )
+    logging.getLogger("remote_cmd").setLevel(getattr(logging, level.upper(), logging.INFO))
 
     logging.getLogger("remote_cmd").debug("日志系统已初始化")
 

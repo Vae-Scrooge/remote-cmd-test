@@ -1,0 +1,102 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "remote-cmd"
+version = "1.0.0"
+description = "SSH 远程服务器管理工具"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Vae-Scrooge", email = "vae-scrooge@example.com" },
+]
+keywords = ["ssh", "remote", "server-management"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: System :: Systems Administration",
+    "Topic :: System :: Networking",
+]
+dependencies = [
+    "paramiko>=3.0",
+    "click>=8.0",
+    "cryptography>=41.0",
+    "rich>=13.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Vae-Scrooge/remote-cmd-test"
+Repository = "https://github.com/Vae-Scrooge/remote-cmd-test"
+Documentation = "https://github.com/Vae-Scrooge/remote-cmd-test"
+
+[project.scripts]
+remote-cmd = "remote_cmd.cli.main:main"
+
+[tool.setuptools.packages.find]
+include = ["remote_cmd*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+python_files = ["test_*.py"]
+markers = [
+    "asyncio: async test",
+]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "BLE", # blind except
+    "B",   # bugbear
+    "SIM", # flake8-simplify
+    "ARG", # unused arguments
+]
+ignore = [
+    "E501",  # 行长度用 ruff formatter 控制
+    "N812",  # 允许小写导入
+    "N999",  # 模块名不强制 PEP8
+    "B904",  # raise-within-try 暂时容忍
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.9"
+strict = false
+ignore_missing_imports = true
+disallow_untyped_defs = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = false
+no_implicit_optional = true
+check_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = [
+    "paramiko.*",
+    "click.*",
+    "cryptography.*",
+    "keyring.*",
+]
+ignore_missing_imports = true

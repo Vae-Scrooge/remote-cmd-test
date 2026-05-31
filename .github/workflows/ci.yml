@@ -33,18 +33,20 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-cov black flake8
+        pip install -e .
+        pip install pytest pytest-cov black ruff mypy pre-commit types-setuptools types-paramiko
     
-    - name: Lint with flake8
+    - name: Lint with ruff
       run: |
-        # Stop build if there are Python syntax errors or undefined names
-        flake8 remote_cmd tests --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Exit-zero treats all errors as warnings
-        flake8 remote_cmd tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        ruff check remote_cmd tests --output-format=github
     
-    - name: Check code formatting with black
+    - name: Check code formatting with ruff
       run: |
-        black --check remote_cmd tests
+        ruff format remote_cmd tests --check
+    
+    - name: Type check with mypy
+      run: |
+        mypy remote_cmd --no-strict-optional --ignore-missing-imports
     
     - name: Run tests with pytest
       run: |

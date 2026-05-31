@@ -7,7 +7,7 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from remote_cmd.core.host import Host
 

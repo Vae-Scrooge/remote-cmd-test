@@ -1,6 +1,7 @@
 """主机业务逻辑服务测试"""
 
 import pytest
+
 from remote_cmd.core.host import Host
 from remote_cmd.repository.json_host_repository import JsonHostRepository
 from remote_cmd.service.host_service import HostService
@@ -49,9 +50,7 @@ class TestHostService:
 
     def test_update_host(self, service):
         """测试：更新主机"""
-        service.add_host(
-            Host(name="srv", hostname="10.0.0.1", username="root", port=22)
-        )
+        service.add_host(Host(name="srv", hostname="10.0.0.1", username="root", port=22))
         service.update_host("srv", port=2222, description="updated")
 
         updated = service.get_host("srv")
@@ -87,9 +86,7 @@ class TestHostService:
 
     def test_list_tags(self, service):
         """测试：列出所有标签"""
-        service.add_host(
-            Host(name="a", hostname="1", username="u", tags=["web", "prod"])
-        )
+        service.add_host(Host(name="a", hostname="1", username="u", tags=["web", "prod"]))
         service.add_host(Host(name="b", hostname="2", username="u", tags=["db"]))
         tags = service.list_tags()
         assert set(tags) == {"web", "prod", "db"}
@@ -98,14 +95,10 @@ class TestHostService:
         """测试：添加主机时密码被自动加密"""
         key_path = tmp_path / ".key"
         crypto = CredentialEncryption(key_path=key_path)
-        repo = JsonHostRepository(
-            filepath=str(tmp_path / "hosts.json"), encryption=crypto
-        )
+        repo = JsonHostRepository(filepath=str(tmp_path / "hosts.json"), encryption=crypto)
         svc = HostService(repository=repo, encryption=crypto)
 
-        svc.add_host(
-            Host(name="secure", hostname="10.0.0.1", username="root", password="secret")
-        )
+        svc.add_host(Host(name="secure", hostname="10.0.0.1", username="root", password="secret"))
 
         # 从文件读取，验证密码已加密
         import json

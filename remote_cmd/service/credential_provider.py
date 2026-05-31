@@ -20,10 +20,10 @@
     >>> password = provider.get_password(host)
 """
 
-import os
 import logging
+import os
 from abc import ABC, abstractmethod
-from typing import Optional, List
+from typing import List, Optional
 
 from remote_cmd.core.host import Host
 from remote_cmd.repository.host_repository import HostRepository
@@ -111,3 +111,86 @@ class ChainCredentialProvider(CredentialProvider):
     def add_provider(self, provider: CredentialProvider) -> None:
         """在链尾添加一个提供者"""
         self._providers.append(provider)
+
+
+class KeyringCredentialProvider(CredentialProvider):
+    """
+    Keyring 凭据提供者
+
+    使用系统 Keyring 服务（Windows Credential Manager / macOS Keychain / Linux Secret Service）
+    获取密码。需要安装 keyring 库（pip install keyring）。
+
+    在凭据链中的位置：EnvCredentialProvider 之后，EncryptedFileCredentialProvider 之前。
+
+    Args:
+        service_name: Keyring 服务名称，默认 "remote-cmd"
+    """
+
+    def __init__(self, service_name: str = "remote-cmd"):
+        self._service_name = service_name
+
+    def get_password(self, host: Host) -> Optional[str]:
+        """
+        从系统 Keyring 获取密码
+
+        使用 keyring.get_password(service_name, host.name) 获取。
+        keyring 库为可选依赖，未安装时静默返回 None。
+
+        Args:
+            host: 主机配置对象
+
+        Returns:
+            Optional[str]: 密码，未找到或不可用时返回 None
+        """
+        try:
+            import keyring  # type: ignore[import-untyped]
+
+            password = keyring.get_password(self._service_name, host.name)
+            if password:
+                logger.debug(f"从 Keyring 获取到 {host.name} 的密码")
+            return password
+        except ImportError:
+            logger.debug("keyring 库未安装，跳过 KeyringCredentialProvider")
+            return None
+        except Exception as e:
+            logger.debug(f"Keyring 访问失败: {e}")
+            return None
+
+    def set_password(self, host: Host, password: str) -> bool:
+        """
+        向 Keyring 存储密码
+
+        Args:
+            host: 主机配置对象
+            password: 要存储的密码
+
+        Returns:
+            bool: 存储成功返回 True
+        """
+        try:
+            import keyring  # type: ignore[import-untyped]
+
+            keyring.set_password(self._service_name, host.name, password)
+            return True
+        except Exception as e:
+            logger.debug(f"Keyring 存储失败: {e}")
+            return False
+
+    def delete_password(self, host: Host) -> bool:
+        """
+        从 Keyring 删除密码
+
+        Args:
+            host: 主机配置对象
+
+        Returns:
+            bool: 删除成功返回 True
+        """
+        try:
+            import keyring  # type: ignore[import-untyped]
+
+            keyring.delete_password(self._service_name, host.name)
+            return True
+        except Exception as e:
+            logger.debug(f"Keyring 删除失败: {e}")
+            return False

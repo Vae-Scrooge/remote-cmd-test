@@ -12,10 +12,11 @@
 Author: Vae-Scrooge
 """
 
-import yaml
 import json
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict
+
+import yaml
 
 # ============================================================================
 # 配置路径管理
@@ -84,7 +85,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
         return get_default_config()
 
     # 根据文件扩展名选择解析方式
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         if path.suffix in [".yaml", ".yml"]:
             return yaml.safe_load(f) or {}
         elif path.suffix == ".json":

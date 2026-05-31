@@ -62,25 +62,31 @@ import logging
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 # 向后兼容导出（原有 API）
-from remote_cmd.core.ssh_client import SSHClient
 from remote_cmd.core.async_client import AsyncSSHClient, ConnectionPool
-from remote_cmd.core.host_manager import HostManager
 from remote_cmd.core.host import Host
+from remote_cmd.core.host_manager import HostManager
+from remote_cmd.core.ssh_client import SSHClient
 
 # 新架构导出（推荐）
 from remote_cmd.repository import HostRepository, JsonHostRepository
+
+# Phase 2 新组件
+from remote_cmd.repository.sqlite_host_repository import SqliteHostRepository
 from remote_cmd.service import (
-    HostService,
-    SSHService,
+    ChainCredentialProvider,
     CredentialProvider,
     EnvCredentialProvider,
-    ChainCredentialProvider,
+    HostService,
+    SSHService,
 )
+from remote_cmd.service.batch_executor import BatchExecutor, BatchHostResult, BatchResult
+from remote_cmd.service.credential_provider import KeyringCredentialProvider
+from remote_cmd.service.task_runner import Task, TaskRunner, TaskStatus
 from remote_cmd.utils.crypto import CredentialEncryption
 from remote_cmd.utils.logging_utils import (
-    setup_logging,
     SensitiveDataFilter,
     get_logger,
+    setup_logging,
 )
 
 # 定义公开 API
@@ -103,6 +109,15 @@ __all__ = [
     "setup_logging",
     "SensitiveDataFilter",
     "get_logger",
+    # Phase 2 新组件
+    "SqliteHostRepository",
+    "BatchExecutor",
+    "BatchResult",
+    "BatchHostResult",
+    "TaskRunner",
+    "Task",
+    "TaskStatus",
+    "KeyringCredentialProvider",
     # 元信息
     "__version__",
     "__author__",

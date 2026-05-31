@@ -15,11 +15,12 @@ SSH 客户端单元测试
     pytest tests/test_ssh_client.py -v
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
-from remote_cmd.core.ssh_client import SSHClient, ConnectionConfig, CommandResult
-from remote_cmd.utils.exceptions import SSHConnectionError, SSHCommandError
+import pytest
+
+from remote_cmd.core.ssh_client import CommandResult, ConnectionConfig, SSHClient
+from remote_cmd.utils.exceptions import SSHConnectionError
 
 # ============================================================================
 # ConnectionConfig 测试
@@ -31,9 +32,7 @@ class TestConnectionConfig:
 
     def test_valid_config_with_password(self):
         """测试：使用密码的有效配置"""
-        config = ConnectionConfig(
-            hostname="example.com", username="admin", password="secret"
-        )
+        config = ConnectionConfig(hostname="example.com", username="admin", password="secret")
 
         assert config.hostname == "example.com"
         assert config.username == "admin"
@@ -67,9 +66,7 @@ class TestCommandResult:
 
     def test_success_property(self):
         """测试：成功命令的 success 属性"""
-        result = CommandResult(
-            command="ls", stdout="file1\nfile2", stderr="", exit_code=0
-        )
+        result = CommandResult(command="ls", stdout="file1\nfile2", stderr="", exit_code=0)
 
         assert result.success is True
 
@@ -111,9 +108,7 @@ class TestSSHClient:
         mock_ssh = MagicMock()
         mock_ssh_class.return_value = mock_ssh
 
-        config = ConnectionConfig(
-            hostname="example.com", username="admin", password="secret"
-        )
+        config = ConnectionConfig(hostname="example.com", username="admin", password="secret")
 
         # 执行连接
         client = SSHClient(config)
@@ -145,9 +140,7 @@ class TestSSHClient:
 
         mock_ssh.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
 
-        config = ConnectionConfig(
-            hostname="example.com", username="admin", password="secret"
-        )
+        config = ConnectionConfig(hostname="example.com", username="admin", password="secret")
 
         # 使用上下文管理器执行命令
         with SSHClient(config) as client:
@@ -160,9 +153,7 @@ class TestSSHClient:
 
     def test_execute_without_connection(self):
         """测试：未连接时执行命令应抛出异常"""
-        config = ConnectionConfig(
-            hostname="example.com", username="admin", password="secret"
-        )
+        config = ConnectionConfig(hostname="example.com", username="admin", password="secret")
 
         client = SSHClient(config)
 
@@ -175,9 +166,7 @@ class TestSSHClient:
         mock_ssh = MagicMock()
         mock_ssh_class.return_value = mock_ssh
 
-        config = ConnectionConfig(
-            hostname="example.com", username="admin", password="secret"
-        )
+        config = ConnectionConfig(hostname="example.com", username="admin", password="secret")
 
         # 进入和退出上下文
         with SSHClient(config) as client:
@@ -196,9 +185,7 @@ class TestSSHClient:
         mock_ssh.get_transport.return_value = mock_transport
         mock_ssh_class.return_value = mock_ssh
 
-        config = ConnectionConfig(
-            hostname="example.com", username="admin", password="secret"
-        )
+        config = ConnectionConfig(hostname="example.com", username="admin", password="secret")
 
         with SSHClient(config) as client:
             assert client.is_connected() is True

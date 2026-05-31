@@ -9,7 +9,7 @@
 - 与连接配置的转换
 """
 
-from dataclasses import dataclass, asdict, field
+from dataclasses import asdict, dataclass
 from typing import Dict, List, Optional
 
 from remote_cmd.core.ssh_client import ConnectionConfig

@@ -15,19 +15,20 @@
 - download: 从远程主机下载文件
 """
 
-import click
 import os
 from typing import Optional
 
+import click
+
 from remote_cmd.core.host import Host
-from remote_cmd.core.ssh_client import SSHClient
 from remote_cmd.repository.json_host_repository import JsonHostRepository
-from remote_cmd.service.host_service import HostService
+from remote_cmd.service.batch_executor import BatchExecutor
 from remote_cmd.service.credential_provider import (
-    EnvCredentialProvider,
     ChainCredentialProvider,
+    EnvCredentialProvider,
 )
-from remote_cmd.utils.config import load_config, get_default_config_path
+from remote_cmd.service.host_service import HostService
+from remote_cmd.utils.config import get_default_config_path, load_config
 
 
 def _build_service(config_file: str) -> HostService:
@@ -185,9 +186,7 @@ def host_list(ctx, tag: Optional[str]):
 
     for host in hosts:
         tags_str = ", ".join(host.tags) if host.tags else "-"
-        click.echo(
-            f"{host.name:<20} {host.hostname:<25} {host.username:<15} {tags_str:<20}"
-        )
+        click.echo(f"{host.name:<20} {host.hostname:<25} {host.username:<15} {tags_str:<20}")
 
     click.echo()
 
@@ -329,6 +328,99 @@ def download(ctx, host_name: str, remote_path: str, local_path: str):
             click.echo(f"✓ 下载成功: {host_name}:{remote_path} -> {local_path}")
     except Exception as e:
         click.echo(f"✗ 错误: {e}", err=True)
+        ctx.exit(1)
+
+
+@cli.command()
+@click.argument("host_names", nargs=-1, required=True)
+@click.argument("command", required=True)
+@click.option("--concurrency", "-C", default=10, help="最大并发数（默认：10）")
+@click.option("--timeout", "-T", default=30, help="单个命令超时秒数（默认：30）")
+@click.option("--retry", "-r", default=0, help="失败重试次数（默认：0）")
+@click.option("--retry-delay", default=1.0, help="重试间隔秒数（默认：1.0）")
+@click.option("--show-failures", is_flag=True, help="仅显示失败主机")
+@click.pass_context
+def batch_run(
+    ctx,
+    host_names: tuple,
+    command: str,
+    concurrency: int,
+    timeout: int,
+    retry: int,
+    retry_delay: float,
+    show_failures: bool,
+):
+    """
+    在多个主机上批量执行命令
+
+    HOST_NAMES: 主机名称列表（可指定多个）
+    COMMAND: 要执行的命令
+
+    示例:
+
+        remote-cmd batch-run web-1 web-2 db-1 "uptime"
+
+        remote-cmd batch-run web-1 web-2 "df -h" -C 5 -r 2
+    """
+    service: HostService = ctx.obj["service"]
+    executor = BatchExecutor(
+        host_service=service,
+        max_concurrency=concurrency,
+        command_timeout=timeout,
+    )
+
+    click.echo(f"批量执行: {len(host_names)} 台主机, 命令='{command}', 并发={concurrency}")
+    click.echo()
+
+    with click.progressbar(
+        length=len(host_names),
+        label="执行进度",
+        show_eta=True,
+        show_percent=True,
+    ) as bar:
+
+        def progress(completed, total, host_name):
+            bar.update(1)
+
+        result = executor.execute(
+            host_names=list(host_names),
+            command=command,
+            retry_count=retry,
+            retry_delay=retry_delay,
+            progress_callback=progress,
+        )
+
+    click.echo()
+    click.echo("=" * 50)
+    click.echo("  执行结果汇总")
+    click.echo("=" * 50)
+    click.echo(f"  总执行:   {result.total}")
+    click.echo(f"  成功:     {result.success}")
+    click.echo(f"  失败:     {result.failed}")
+    click.echo(f"  耗时:     {result.duration:.1f}s")
+    click.echo(f"  成功率:   {result.success_rate:.1%}")
+    click.echo("=" * 50)
+
+    if result.failed_hosts:
+        click.echo()
+        click.echo(click.style("失败主机:", fg="red"))
+        for host in result.failed_hosts:
+            host_result = result.results[host]
+            error_msg = host_result.error or f"exit_code={host_result.exit_code}"
+            click.echo(
+                click.style(
+                    f"  ✗ {host}: {error_msg}",
+                    fg="red",
+                )
+            )
+
+    if not show_failures and result.success_hosts:
+        click.echo()
+        click.echo(click.style("成功主机:", fg="green"))
+        for host in result.success_hosts:
+            click.echo(click.style(f"  ✓ {host}", fg="green"))
+
+    if result.failed > 0:
         ctx.exit(1)
 
 

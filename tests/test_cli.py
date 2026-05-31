@@ -4,15 +4,12 @@
 SSH 连接部分使用 mock 避免真实连接。
 """
 
-import json
-import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
 
 from remote_cmd.cli.main import cli
-from remote_cmd.core.host_manager import Host
 
 
 @pytest.fixture
@@ -228,9 +225,7 @@ class TestHostShow:
                     "My server",
                 ],
             )
-            result = runner.invoke(
-                cli, ["--config", config_file, "host", "show", "my-server"]
-            )
+            result = runner.invoke(cli, ["--config", config_file, "host", "show", "my-server"])
             assert result.exit_code == 0
             assert "my-server" in result.output
             assert "192.168.1.1" in result.output
@@ -240,9 +235,7 @@ class TestHostShow:
     def test_show_nonexistent_host(self, runner, config_file):
         """测试：显示不存在的主机应报错"""
         with runner.isolated_filesystem():
-            result = runner.invoke(
-                cli, ["--config", config_file, "host", "show", "ghost"]
-            )
+            result = runner.invoke(cli, ["--config", config_file, "host", "show", "ghost"])
             assert result.exit_code != 0
             assert "不存在" in result.output
 

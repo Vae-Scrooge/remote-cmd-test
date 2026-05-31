@@ -1,6 +1,7 @@
 """凭据加密模块测试"""
 
 import pytest
+
 from remote_cmd.utils.crypto import CredentialEncryption, CredentialEncryptionError
 
 

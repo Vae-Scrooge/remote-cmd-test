@@ -1,13 +1,12 @@
 """凭据提供链测试"""
 
 import os
-import pytest
+
 from remote_cmd.core.host import Host
 from remote_cmd.service.credential_provider import (
-    EnvCredentialProvider,
     ChainCredentialProvider,
+    EnvCredentialProvider,
 )
-from remote_cmd.utils.crypto import CredentialEncryption
 
 
 class TestEnvCredentialProvider:

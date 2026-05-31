@@ -1,6 +1,7 @@
 """JSON 主机仓库测试"""
 
 import pytest
+
 from remote_cmd.core.host import Host
 from remote_cmd.repository.json_host_repository import JsonHostRepository
 from remote_cmd.utils.crypto import CredentialEncryption
@@ -43,12 +44,8 @@ class TestJsonHostRepository:
     def test_list_with_tag_filter(self, tmp_path):
         """测试：按标签筛选主机"""
         repo = JsonHostRepository(filepath=str(tmp_path / "hosts.json"))
-        repo.save(
-            Host(name="web", hostname="10.0.0.1", username="root", tags=["web", "prod"])
-        )
-        repo.save(
-            Host(name="db", hostname="10.0.0.2", username="root", tags=["db", "prod"])
-        )
+        repo.save(Host(name="web", hostname="10.0.0.1", username="root", tags=["web", "prod"]))
+        repo.save(Host(name="db", hostname="10.0.0.2", username="root", tags=["db", "prod"]))
         repo.save(Host(name="dev", hostname="10.0.0.3", username="root", tags=["dev"]))
 
         web_hosts = repo.list(tag="web")
@@ -124,11 +121,7 @@ class TestJsonHostRepositoryEncryption:
         path = tmp_path / "hosts.json"
         repo = JsonHostRepository(filepath=str(path), encryption=crypto)
 
-        repo.save(
-            Host(
-                name="secure", hostname="10.0.0.1", username="admin", password="secret"
-            )
-        )
+        repo.save(Host(name="secure", hostname="10.0.0.1", username="admin", password="secret"))
         repo.flush()
 
         import json
@@ -149,11 +142,7 @@ class TestJsonHostRepositoryEncryption:
 
         path = str(tmp_path / "hosts.json")
         repo = JsonHostRepository(filepath=path, encryption=crypto)
-        repo.save(
-            Host(
-                name="secure", hostname="10.0.0.1", username="admin", password="secret"
-            )
-        )
+        repo.save(Host(name="secure", hostname="10.0.0.1", username="admin", password="secret"))
         repo.flush()
 
         repo2 = JsonHostRepository(filepath=path, encryption=crypto)

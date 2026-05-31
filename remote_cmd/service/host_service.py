@@ -30,10 +30,10 @@ from remote_cmd.core.host import Host
 from remote_cmd.core.ssh_client import SSHClient
 from remote_cmd.repository.host_repository import HostRepository
 from remote_cmd.service.credential_provider import (
-    CredentialProvider,
     ChainCredentialProvider,
-    EnvCredentialProvider,
+    CredentialProvider,
     EncryptedFileCredentialProvider,
+    EnvCredentialProvider,
 )
 from remote_cmd.service.ssh_service import SSHService
 from remote_cmd.utils.crypto import CredentialEncryption
@@ -200,9 +200,7 @@ class HostService:
         results: Dict[str, bool] = {}
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_map = {
-                executor.submit(self.test_connection, h.name): h.name for h in hosts
-            }
+            future_map = {executor.submit(self.test_connection, h.name): h.name for h in hosts}
             for future in as_completed(future_map):
                 name = future_map[future]
                 try:

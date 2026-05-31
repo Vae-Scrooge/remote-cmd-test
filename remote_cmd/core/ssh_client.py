@@ -12,17 +12,18 @@ SSH 客户端模块
 Author: Vae-Scrooge
 """
 
-import paramiko
+import logging
 import socket
 import stat
-import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
+
+import paramiko
 
 from remote_cmd.utils.exceptions import (
-    SSHConnectionError,
     SSHCommandError,
+    SSHConnectionError,
     SSHFileTransferError,
 )
 
@@ -245,7 +246,7 @@ class SSHClient:
             raise SSHConnectionError(f"认证失败: {e}")
         except socket.timeout:
             raise SSHConnectionError(f"连接超时: {self.config.hostname}")
-        except socket.gaierror as e:
+        except socket.gaierror:
             raise SSHConnectionError(f"无法解析主机名: {self.config.hostname}")
         except Exception as e:
             raise SSHConnectionError(f"连接错误: {e}")
@@ -372,9 +373,7 @@ class SSHClient:
             full_command = f"{env_str}cd ~ && {command}"
 
             # 执行命令
-            stdin, stdout, stderr = self._client.exec_command(
-                full_command, timeout=timeout
-            )
+            stdin, stdout, stderr = self._client.exec_command(full_command, timeout=timeout)
 
             # 获取命令执行结果
             exit_code = stdout.channel.recv_exit_status()
@@ -480,7 +479,7 @@ class SSHClient:
             logger.info(f"上传文件: {local_path} -> {remote_path}")
             sftp.put(str(local_file), remote_path)
             logger.info("文件上传完成")
-        except (paramiko.SSHException, IOError, OSError) as e:
+        except (paramiko.SSHException, OSError) as e:
             raise SSHFileTransferError(f"文件上传失败: {e}")
 
     def download_file(self, remote_path: str, local_path: str) -> None:
@@ -512,7 +511,7 @@ class SSHClient:
             logger.info(f"下载文件: {remote_path} -> {local_path}")
             sftp.get(remote_path, str(local_file))
             logger.info("文件下载完成")
-        except (paramiko.SSHException, IOError, OSError) as e:
+        except (paramiko.SSHException, OSError) as e:
             raise SSHFileTransferError(f"文件下载失败: {e}")
 
     def list_remote_directory(self, remote_path: str = ".") -> List[Dict[str, Any]]:
@@ -555,7 +554,7 @@ class SSHClient:
                     }
                 )
             return entries
-        except (paramiko.SSHException, IOError, OSError) as e:
+        except (paramiko.SSHException, OSError) as e:
             raise SSHFileTransferError(f"列出远程目录失败: {e}")
 
     def create_remote_directory(self, path: str) -> None:
@@ -567,14 +566,14 @@ class SSHClient:
                 return
             try:
                 sftp_client.stat(remote_path)
-            except IOError:
+            except OSError:
                 _makedirs(sftp_client, str(Path(remote_path).parent))
                 sftp_client.mkdir(remote_path)
 
         try:
             _makedirs(sftp, path)
             logger.info(f"已创建远程目录: {path}")
-        except (paramiko.SSHException, IOError, OSError) as e:
+        except (paramiko.SSHException, OSError) as e:
             raise SSHFileTransferError(f"创建远程目录失败: {e}")
 
     def remove_remote_file(self, path: str) -> None:
@@ -583,7 +582,7 @@ class SSHClient:
         try:
             sftp.remove(path)
             logger.info(f"已删除远程文件: {path}")
-        except (paramiko.SSHException, IOError, OSError) as e:
+        except (paramiko.SSHException, OSError) as e:
             raise SSHFileTransferError(f"删除远程文件失败: {e}")
 
     def remove_remote_directory(self, path: str, recursive: bool = False) -> None:
@@ -596,7 +595,7 @@ class SSHClient:
             try:
                 for entry in sftp_client.listdir_attr(remote_path):
                     entries.append((entry.filename, bool(entry.st_mode & stat.S_IFDIR)))
-            except IOError:
+            except OSError:
                 return
             # 先删除文件，再递归删除子目录
             for name, is_dir in entries:
@@ -613,7 +612,7 @@ class SSHClient:
             else:
                 sftp.rmdir(path)
             logger.info(f"已删除远程目录: {path}")
-        except (paramiko.SSHException, IOError, OSError) as e:
+        except (paramiko.SSHException, OSError) as e:
             raise SSHFileTransferError(f"删除远程目录失败: {e}")
 
     def remote_file_exists(self, path: str) -> bool:
@@ -622,7 +621,7 @@ class SSHClient:
             sftp = self._get_sftp()
             sftp.stat(path)
             return True
-        except IOError:
+        except OSError:
             return False
         except SSHConnectionError:
             return False
@@ -641,5 +640,5 @@ class SSHClient:
                 "is_dir": stat.S_ISDIR(mode),
                 "is_file": stat.S_ISREG(mode),
             }
-        except (paramiko.SSHException, IOError, OSError) as e:
+        except (paramiko.SSHException, OSError) as e:
             raise SSHFileTransferError(f"获取文件信息失败: {e}")

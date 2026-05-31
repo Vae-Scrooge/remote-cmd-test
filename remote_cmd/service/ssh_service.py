@@ -12,8 +12,7 @@ SSH 连接服务
 import logging
 from typing import Optional
 
-from remote_cmd.core.ssh_client import SSHClient, ConnectionConfig, CommandResult
-from remote_cmd.utils.exceptions import SSHConnectionError
+from remote_cmd.core.ssh_client import CommandResult, ConnectionConfig, SSHClient
 
 logger = logging.getLogger(__name__)
 

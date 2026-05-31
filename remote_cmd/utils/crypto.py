@@ -17,9 +17,8 @@
     - 首次使用时自动生成密钥
 """
 
-import os
-import stat as stat_module
 import logging
+import stat as stat_module
 from pathlib import Path
 from typing import Optional
 

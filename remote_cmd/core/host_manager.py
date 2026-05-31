@@ -10,12 +10,12 @@
 """
 
 import logging
-from typing import Dict, List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict, List, Optional
 
 # 向后兼容: Host 从新的 host.py 导出
 from remote_cmd.core.host import Host
-from remote_cmd.core.ssh_client import SSHClient, ConnectionConfig
+from remote_cmd.core.ssh_client import SSHClient
 from remote_cmd.repository.json_host_repository import JsonHostRepository
 from remote_cmd.service.host_service import HostService
 
@@ -131,9 +131,7 @@ class HostManager:
         host_names = list(self.hosts.keys())
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_map = {
-                executor.submit(self.test_connection, name): name for name in host_names
-            }
+            future_map = {executor.submit(self.test_connection, name): name for name in host_names}
             for future in as_completed(future_map):
                 name = future_map[future]
                 try:
