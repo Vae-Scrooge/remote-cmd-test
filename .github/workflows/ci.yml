@@ -45,29 +45,7 @@ jobs:
         ruff format remote_cmd tests --check
     
     - name: Type check with mypy
-      run: |
-        mypy --version
-        python --version
-        pip list 2>/dev/null | grep mypy
-        mypy remote_cmd --no-strict-optional --ignore-missing-imports > mypy_output.txt 2>&1 || true
-        echo "=== mypy output ==="
-        cat mypy_output.txt
-        echo "=== end mypy output ==="
-        if [ -s mypy_output.txt ]; then
-          echo "mypy had output - check annotations"
-          head -10 mypy_output.txt > /tmp/mypy_anno.txt
-          while IFS= read -r line; do
-            echo "::error title=mypy::$line"
-          done < /tmp/mypy_anno.txt
-        fi
-        exit $(test ! -s mypy_output.txt)
-    
-    - name: Upload mypy output
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: mypy-output-${{ matrix.python-version }}
-        path: mypy_output.txt
+      run: mypy remote_cmd --no-strict-optional --ignore-missing-imports
     
     - name: Run tests with pytest
       run: |
