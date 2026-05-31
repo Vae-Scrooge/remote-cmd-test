@@ -45,7 +45,7 @@ jobs:
         ruff format remote_cmd tests --check
     
     - name: Type check with mypy
-      run: mypy remote_cmd --no-strict-optional --ignore-missing-imports
+      run: mypy remote_cmd --no-strict-optional --ignore-missing-imports --no-config-file
     
     - name: Run tests with pytest
       run: |
