@@ -46,26 +46,28 @@ jobs:
     
     - name: Type check with mypy
       run: |
-        echo "::group::mypy version"
         mypy --version
-        echo "::endgroup::"
-        echo "::group::sanity check"
-        echo 'x: int = 1' > /tmp/test_mypy.py
-        mypy /tmp/test_mypy.py && echo "sanity OK" || echo "sanity FAILED"
-        echo "::endgroup::"
-        echo "::group::mypy output"
-        mypy remote_cmd --no-strict-optional --ignore-missing-imports 2>&1 | tee /tmp/mypy_output.txt
-        exit_code=${PIPESTATUS[0]}
-        echo "::endgroup::"
-        echo "::group::annotations"
-        if [ $exit_code -ne 0 ] && [ -s /tmp/mypy_output.txt ]; then
-          head -50 /tmp/mypy_output.txt > /tmp/mypy_head.txt
+        python --version
+        pip list 2>/dev/null | grep mypy
+        mypy remote_cmd --no-strict-optional --ignore-missing-imports > mypy_output.txt 2>&1 || true
+        echo "=== mypy output ==="
+        cat mypy_output.txt
+        echo "=== end mypy output ==="
+        if [ -s mypy_output.txt ]; then
+          echo "mypy had output - check annotations"
+          head -10 mypy_output.txt > /tmp/mypy_anno.txt
           while IFS= read -r line; do
             echo "::error title=mypy::$line"
-          done < /tmp/mypy_head.txt
+          done < /tmp/mypy_anno.txt
         fi
-        echo "::endgroup::"
-        exit $exit_code
+        exit $(test ! -s mypy_output.txt)
+    
+    - name: Upload mypy output
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: mypy-output-${{ matrix.python-version }}
+        path: mypy_output.txt
     
     - name: Run tests with pytest
       run: |
