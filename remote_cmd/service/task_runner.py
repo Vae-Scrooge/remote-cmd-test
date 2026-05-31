@@ -25,7 +25,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class Task:
     completed_at: Optional[datetime] = None
     result: Any = None
     error: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class TaskRunner:
@@ -84,9 +84,9 @@ class TaskRunner:
 
     def __init__(self, max_workers: int = 10):
         self._max_workers = max_workers
-        self._tasks: Dict[str, Task] = {}
-        self._events: Dict[str, threading.Event] = {}
-        self._cancel_flags: Dict[str, threading.Event] = {}
+        self._tasks: dict[str, Task] = {}
+        self._events: dict[str, threading.Event] = {}
+        self._cancel_flags: dict[str, threading.Event] = {}
         self._semaphore = threading.Semaphore(max_workers)
         self._lock = threading.Lock()
 
@@ -99,7 +99,7 @@ class TaskRunner:
         name: str,
         fn: Callable[..., Any],
         *args: Any,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
         **kwargs: Any,
     ) -> str:
         """
@@ -222,7 +222,7 @@ class TaskRunner:
         self,
         status: Optional[TaskStatus] = None,
         limit: int = 50,
-    ) -> List[Task]:
+    ) -> list[Task]:
         """
         列出任务
 
@@ -303,19 +303,22 @@ class TaskRunner:
             int: 已清理的任务数
         """
         now = datetime.now()
-        to_remove: List[str] = []
+        to_remove: list[str] = []
 
         with self._lock:
             for task_id, task in list(self._tasks.items()):
-                if task.status in (
-                    TaskStatus.SUCCESS,
-                    TaskStatus.FAILED,
-                    TaskStatus.CANCELLED,
+                if (
+                    task.status
+                    in (
+                        TaskStatus.SUCCESS,
+                        TaskStatus.FAILED,
+                        TaskStatus.CANCELLED,
+                    )
+                    and task.completed_at
                 ):
-                    if task.completed_at:
-                        age = (now - task.completed_at).total_seconds()
-                        if age > max_age_seconds:
-                            to_remove.append(task_id)
+                    age = (now - task.completed_at).total_seconds()
+                    if age > max_age_seconds:
+                        to_remove.append(task_id)
 
             for task_id in to_remove:
                 del self._tasks[task_id]
@@ -402,7 +405,7 @@ class TaskRunner:
                         task.completed_at = datetime.now()
                 logger.info(f"任务完成: [{task_id[:8]}]")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             with self._lock:
                 task = self._tasks.get(task_id)
                 if task and task.status != TaskStatus.CANCELLED:

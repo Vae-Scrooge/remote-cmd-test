@@ -24,7 +24,7 @@ class TestSqliteHostRepository:
         repo = SqliteHostRepository(temp_db_path)
         try:
             repo.get("ghost")
-            assert False, "应抛出 KeyError"
+            raise AssertionError("应抛出 KeyError")
         except KeyError:
             pass
 
@@ -50,7 +50,7 @@ class TestSqliteHostRepository:
         repo = SqliteHostRepository(temp_db_path)
         try:
             repo.delete("ghost")
-            assert False, "应抛出 KeyError"
+            raise AssertionError("应抛出 KeyError")
         except KeyError:
             pass
 

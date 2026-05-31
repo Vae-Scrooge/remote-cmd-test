@@ -37,7 +37,7 @@ class MockSSHServer:
         if self.should_fail:
             mock_ssh.connect.side_effect = Exception("Connection refused")
         else:
-            mock_ssh.connect.side_effect = lambda **kw: setattr(self, "is_connected_flag", True)
+            mock_ssh.connect.side_effect = lambda **_: setattr(self, "is_connected_flag", True)
 
         mock_ssh.get_transport.return_value = MagicMock()
         mock_ssh.get_transport.return_value.is_active.return_value = True

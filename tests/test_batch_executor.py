@@ -153,7 +153,7 @@ class TestBatchExecutor:
         assert result.results["srv3"].success is True
 
     @patch("remote_cmd.service.batch_executor.SSHClient")
-    def test_host_not_found(self, mock_ssh_class):
+    def test_host_not_found(self, _mock_ssh_class):
         """测试：主机不存在"""
         service = self.make_mock_service([])
 
@@ -175,7 +175,7 @@ class TestBatchExecutor:
         mock_ssh_class.return_value = mock_instance
 
         # 第一次调用抛出异常触发重试，第二次返回成功
-        def execute_side_effect(command, timeout=None):
+        def execute_side_effect(command, timeout=None):  # noqa: ARG001
             if execute_side_effect.call_count == 0:
                 execute_side_effect.call_count += 1
                 raise Exception("Connection reset")

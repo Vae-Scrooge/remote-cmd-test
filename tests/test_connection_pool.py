@@ -14,7 +14,7 @@ from remote_cmd.core.ssh_client import ConnectionConfig
 class MockAsyncClient:
     """模拟 AsyncSSHClient，不真实连接 SSH"""
 
-    def __init__(self, config, loop=None):
+    def __init__(self, config, loop=None):  # noqa: ARG002
         self.config = config
         self._connected = True
         self._created_at = time.time()

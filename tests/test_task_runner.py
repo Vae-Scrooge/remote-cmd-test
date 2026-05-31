@@ -1,5 +1,6 @@
 """TaskRunner 任务运行器测试"""
 
+import contextlib
 import threading
 import time
 from datetime import datetime
@@ -120,10 +121,8 @@ class TestTaskRunner:
             tid = runner.submit(f"t{i}", track)
             ids.append(tid)
         for tid in ids:
-            try:
+            with contextlib.suppress(TimeoutError):
                 runner.wait_for(tid, timeout=5)
-            except TimeoutError:
-                pass
 
         assert max_concurrent <= 2
 
@@ -185,7 +184,7 @@ class TestTaskRunner:
         tid = runner.submit("slow", time.sleep, 30)
         try:
             runner.wait_for(tid, timeout=0.1)
-            assert False, "应抛出 TimeoutError"
+            raise AssertionError("应抛出 TimeoutError")
         except TimeoutError:
             pass
 
@@ -193,7 +192,7 @@ class TestTaskRunner:
         runner = TaskRunner()
         try:
             runner.wait_for("nonexistent")
-            assert False, "应抛出 KeyError"
+            raise AssertionError("应抛出 KeyError")
         except KeyError:
             pass
 

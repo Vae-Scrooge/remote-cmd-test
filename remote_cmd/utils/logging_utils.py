@@ -17,7 +17,7 @@ import re
 import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 # ============================================================================
 # 敏感数据脱敏过滤器
@@ -63,7 +63,7 @@ class SensitiveDataFilter(logging.Filter):
         return True
 
     @staticmethod
-    def redact_dict(data: Dict[str, Any]) -> Dict[str, Any]:
+    def redact_dict(data: dict[str, Any]) -> dict[str, Any]:
         """递归脱敏字典中的敏感字段"""
         result = {}
         for key, value in data.items():
@@ -169,7 +169,7 @@ class LoggerAdapter(logging.LoggerAdapter):
         # 输出: [host=web-server] 连接成功
     """
 
-    def process(self, msg: str, kwargs: Dict[str, Any]) -> tuple:
+    def process(self, msg: str, kwargs: dict[str, Any]) -> tuple:
         ctx = " ".join(f"[{k}={v}]" for k, v in self.extra.items())
         return f"{ctx} {msg}" if ctx else msg, kwargs
 

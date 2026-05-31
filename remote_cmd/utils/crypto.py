@@ -17,6 +17,7 @@
     - 首次使用时自动生成密钥
 """
 
+import contextlib
 import logging
 import stat as stat_module
 from pathlib import Path
@@ -129,10 +130,8 @@ class CredentialEncryption:
         key = Fernet.generate_key()
         self._key_path.parent.mkdir(parents=True, exist_ok=True)
         self._key_path.write_bytes(key)
-        try:
+        with contextlib.suppress(OSError):
             self._key_path.chmod(0o600)
-        except OSError:
-            pass
 
         logger.info(f"已生成加密密钥: {self._key_path}")
         return key

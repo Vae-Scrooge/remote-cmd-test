@@ -15,11 +15,12 @@ SQLite 主机仓库实现
     >>> repo.list(tag="production")
 """
 
+import builtins
 import json
 import logging
 import sqlite3
 import threading
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from remote_cmd.core.host import Host
 from remote_cmd.repository.host_repository import HostRepository
@@ -156,13 +157,13 @@ class SqliteHostRepository(HostRepository):
                     host = Host.from_dict(host_dict)
                     self.save(host)
                     imported += 1
-                except Exception as e:
+                except (ValueError, TypeError, KeyError) as e:
                     logger.warning(f"跳过无效主机 '{name}': {e}")
 
             if imported > 0:
                 logger.info(f"从 JSON 迁移了 {imported} 台主机到 SQLite")
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, ValueError) as e:
             logger.warning(f"JSON 迁移失败: {e}")
 
     # ========================================================================
@@ -220,7 +221,7 @@ class SqliteHostRepository(HostRepository):
         if cursor.rowcount == 0:
             raise KeyError(f"主机 '{name}' 不存在")
 
-    def list(self, tag: Optional[str] = None) -> List[Host]:
+    def list(self, tag: Optional[str] = None) -> list[Host]:
         """列出主机，可选按标签筛选"""
         with self._lock, self._get_conn() as conn:
             if tag:
@@ -234,7 +235,7 @@ class SqliteHostRepository(HostRepository):
 
         return [self._row_to_host(row) for row in rows]
 
-    def list_tags(self) -> List[str]:
+    def list_tags(self) -> builtins.list[str]:
         """列出所有标签"""
         with self._lock, self._get_conn() as conn:
             rows = conn.execute("SELECT DISTINCT tags FROM hosts WHERE tags IS NOT NULL").fetchall()
@@ -276,7 +277,7 @@ class SqliteHostRepository(HostRepository):
     # 扩展方法（非 ABC 接口）
     # ========================================================================
 
-    def search(self, query: str) -> List[Host]:
+    def search(self, query: str) -> builtins.list[Host]:
         """
         模糊搜索主机
 
@@ -309,7 +310,7 @@ class SqliteHostRepository(HostRepository):
         offset: int = 0,
         limit: int = 20,
         tag: Optional[str] = None,
-    ) -> Tuple[List[Host], int]:
+    ) -> tuple[builtins.list[Host], int]:
         """
         分页查询主机
 

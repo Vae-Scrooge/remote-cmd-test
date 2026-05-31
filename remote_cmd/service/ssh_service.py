@@ -81,7 +81,7 @@ class SSHService:
                 key_filename=key_filename,
             ) as client:
                 return client.is_connected()
-        except Exception as e:
+        except (OSError, Exception) as e:  # noqa: BLE001
             logger.debug(f"连接测试失败 {hostname}:{port}: {e}")
             return False
 

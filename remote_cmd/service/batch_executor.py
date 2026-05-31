@@ -22,7 +22,7 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 from remote_cmd.core.host import Host
 from remote_cmd.core.ssh_client import ConnectionConfig, SSHClient
@@ -73,7 +73,7 @@ class BatchResult:
     success: int
     failed: int
     duration: float
-    results: Dict[str, BatchHostResult] = field(default_factory=dict)
+    results: dict[str, BatchHostResult] = field(default_factory=dict)
 
     @property
     def success_rate(self) -> float:
@@ -83,12 +83,12 @@ class BatchResult:
         return self.success / self.total
 
     @property
-    def failed_hosts(self) -> List[str]:
+    def failed_hosts(self) -> list[str]:
         """失败主机列表"""
         return [h for h, r in self.results.items() if not r.success]
 
     @property
-    def success_hosts(self) -> List[str]:
+    def success_hosts(self) -> list[str]:
         """成功主机列表"""
         return [h for h, r in self.results.items() if r.success]
 
@@ -127,7 +127,7 @@ class BatchExecutor:
 
     def execute(
         self,
-        host_names: List[str],
+        host_names: list[str],
         command: str,
         retry_count: int = 0,
         retry_delay: float = 1.0,
@@ -153,7 +153,7 @@ class BatchExecutor:
             raise ValueError("主机列表不能为空")
 
         total = len(host_names)
-        results: Dict[str, BatchHostResult] = {}
+        results: dict[str, BatchHostResult] = {}
         completed = 0
         start_time = time.time()
 
@@ -178,7 +178,7 @@ class BatchExecutor:
                     host_name = future_map[future]
                     try:
                         result = future.result()
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001
                         result = BatchHostResult(
                             host=host_name,
                             success=False,
@@ -256,7 +256,7 @@ class BatchExecutor:
                 command=command,
                 error=f"主机不存在: {e}",
             )
-        except Exception as e:
+        except (RuntimeError, OSError) as e:
             return BatchHostResult(
                 host=host_name,
                 success=False,
@@ -295,7 +295,7 @@ class BatchExecutor:
                     duration=duration,
                 )
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 duration = time.time() - start
                 last_error = str(e)
                 logger.debug(f"{host_name} 第 {attempt + 1}/{retry_count + 1} 次尝试失败: {e}")

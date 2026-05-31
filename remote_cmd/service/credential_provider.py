@@ -23,7 +23,7 @@
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import Optional
 
 from remote_cmd.core.host import Host
 from remote_cmd.repository.host_repository import HostRepository
@@ -55,7 +55,7 @@ class EnvCredentialProvider(CredentialProvider):
     def __init__(self, env_var: str = "REMOTE_CMD_PASSWORD"):
         self._env_var = env_var
 
-    def get_password(self, host: Host) -> Optional[str]:
+    def get_password(self, _host: Host) -> Optional[str]:
         password = os.environ.get(self._env_var)
         return password
 
@@ -83,7 +83,7 @@ class EncryptedFileCredentialProvider(CredentialProvider):
             if pw and self._encryption.is_encrypted(pw):
                 return self._encryption.decrypt(pw)
             return pw
-        except (KeyError, Exception):
+        except (KeyError, ValueError, TypeError):
             return None
 
 
@@ -98,7 +98,7 @@ class ChainCredentialProvider(CredentialProvider):
         providers: 凭据提供者列表，按优先级降序排列
     """
 
-    def __init__(self, providers: List[CredentialProvider]):
+    def __init__(self, providers: list[CredentialProvider]):
         self._providers = list(providers)
 
     def get_password(self, host: Host) -> Optional[str]:
@@ -152,7 +152,7 @@ class KeyringCredentialProvider(CredentialProvider):
         except ImportError:
             logger.debug("keyring 库未安装，跳过 KeyringCredentialProvider")
             return None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug(f"Keyring 访问失败: {e}")
             return None
 
@@ -172,7 +172,7 @@ class KeyringCredentialProvider(CredentialProvider):
 
             keyring.set_password(self._service_name, host.name, password)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug(f"Keyring 存储失败: {e}")
             return False
 
@@ -191,6 +191,6 @@ class KeyringCredentialProvider(CredentialProvider):
 
             keyring.delete_password(self._service_name, host.name)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug(f"Keyring 删除失败: {e}")
             return False

@@ -17,7 +17,7 @@ import socket
 import stat
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import paramiko
 
@@ -248,7 +248,7 @@ class SSHClient:
             raise SSHConnectionError(f"连接超时: {self.config.hostname}")
         except socket.gaierror:
             raise SSHConnectionError(f"无法解析主机名: {self.config.hostname}")
-        except Exception as e:
+        except (OSError, paramiko.SSHException) as e:
             raise SSHConnectionError(f"连接错误: {e}")
 
     def disconnect(self) -> None:
@@ -263,7 +263,7 @@ class SSHClient:
             try:
                 self._sftp.close()
                 logger.debug("SFTP 连接已关闭")
-            except Exception as e:
+            except (OSError, paramiko.SSHException) as e:
                 logger.warning(f"关闭 SFTP 连接时出错: {e}")
             finally:
                 self._sftp = None
@@ -273,7 +273,7 @@ class SSHClient:
             try:
                 self._client.close()
                 logger.debug("SSH 连接已关闭")
-            except Exception as e:
+            except (OSError, paramiko.SSHException) as e:
                 logger.warning(f"关闭 SSH 连接时出错: {e}")
             finally:
                 self._client = None
@@ -291,7 +291,7 @@ class SSHClient:
         try:
             transport = self._client.get_transport()
             return transport is not None and transport.is_active()
-        except Exception:
+        except (AttributeError, OSError):
             return False
 
     def _get_sftp(self) -> paramiko.SFTPClient:
@@ -334,7 +334,7 @@ class SSHClient:
         self,
         command: str,
         timeout: Optional[int] = None,
-        environment: Optional[Dict[str, str]] = None,
+        environment: Optional[dict[str, str]] = None,
     ) -> CommandResult:
         """
         在远程服务器上执行命令
@@ -514,7 +514,7 @@ class SSHClient:
         except (paramiko.SSHException, OSError) as e:
             raise SSHFileTransferError(f"文件下载失败: {e}")
 
-    def list_remote_directory(self, remote_path: str = ".") -> List[Dict[str, Any]]:
+    def list_remote_directory(self, remote_path: str = ".") -> list[dict[str, Any]]:
         """
         列出远程目录内容
 
@@ -626,7 +626,7 @@ class SSHClient:
         except SSHConnectionError:
             return False
 
-    def get_remote_file_info(self, path: str) -> Dict[str, Any]:
+    def get_remote_file_info(self, path: str) -> dict[str, Any]:
         """获取远程文件信息"""
         sftp = self._get_sftp()
         try:

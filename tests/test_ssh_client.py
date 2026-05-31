@@ -169,7 +169,7 @@ class TestSSHClient:
         config = ConnectionConfig(hostname="example.com", username="admin", password="secret")
 
         # 进入和退出上下文
-        with SSHClient(config) as client:
+        with SSHClient(config):
             pass
 
         # 验证连接被关闭

@@ -11,7 +11,7 @@
 
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, List, Optional
+from typing import Optional
 
 # 向后兼容: Host 从新的 host.py 导出
 from remote_cmd.core.host import Host
@@ -49,7 +49,7 @@ class HostManager:
         self._service = HostService(repository=self._repo)
 
         # 保持原有属性访问兼容
-        self.hosts: Dict[str, Host] = {}
+        self.hosts: dict[str, Host] = {}
         self._sync_hosts()
 
     def _sync_hosts(self):
@@ -76,10 +76,10 @@ class HostManager:
     def get_host(self, name: str) -> Host:
         return self._service.get_host(name)
 
-    def list_hosts(self, tag: Optional[str] = None) -> List[Host]:
+    def list_hosts(self, tag: Optional[str] = None) -> list[Host]:
         return self._service.list_hosts(tag=tag)
 
-    def list_tags(self) -> List[str]:
+    def list_tags(self) -> list[str]:
         return self._service.list_tags()
 
     # ========================================================================
@@ -121,13 +121,13 @@ class HostManager:
         try:
             with self.connect_to_host(name) as client:
                 return client.is_connected()
-        except Exception as e:
+        except OSError as e:
             logger.error(f"主机 {name} 连接测试失败: {e}")
             return False
 
-    def test_all_connections(self, max_workers: int = 10) -> Dict[str, bool]:
+    def test_all_connections(self, max_workers: int = 10) -> dict[str, bool]:
         """并行测试所有主机（通过 test_connection 保持 monkeypatch 兼容）"""
-        results: Dict[str, bool] = {}
+        results: dict[str, bool] = {}
         host_names = list(self.hosts.keys())
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -136,7 +136,7 @@ class HostManager:
                 name = future_map[future]
                 try:
                     results[name] = future.result()
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     logger.error(f"主机 {name} 连接测试异常: {e}")
                     results[name] = False
 

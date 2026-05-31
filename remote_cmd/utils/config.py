@@ -14,7 +14,7 @@ Author: Vae-Scrooge
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import yaml
 
@@ -59,7 +59,7 @@ def get_default_config_path() -> str:
 # ============================================================================
 
 
-def load_config(config_path: str) -> Dict[str, Any]:
+def load_config(config_path: str) -> dict[str, Any]:
     """
     从文件加载配置
 
@@ -94,7 +94,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
             raise ValueError(f"不支持的配置文件格式: {path.suffix}")
 
 
-def save_config(config: Dict[str, Any], config_path: str) -> None:
+def save_config(config: dict[str, Any], config_path: str) -> None:
     """
     保存配置到文件
 
@@ -134,7 +134,7 @@ def save_config(config: Dict[str, Any], config_path: str) -> None:
 # ============================================================================
 
 
-def get_default_config() -> Dict[str, Any]:
+def get_default_config() -> dict[str, Any]:
     """
     获取默认配置
 
@@ -165,7 +165,7 @@ def get_default_config() -> Dict[str, Any]:
 # ============================================================================
 
 
-def validate_config(config: Dict[str, Any]) -> bool:
+def validate_config(config: dict[str, Any]) -> bool:
     """
     验证配置的有效性
 
@@ -197,8 +197,4 @@ def validate_config(config: Dict[str, Any]) -> bool:
 
     # 验证日志级别
     valid_log_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-    if "log_level" in config:
-        if config["log_level"].upper() not in valid_log_levels:
-            return False
-
-    return True
+    return not ("log_level" in config and config["log_level"].upper() not in valid_log_levels)

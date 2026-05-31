@@ -10,7 +10,7 @@
 """
 
 from dataclasses import asdict, dataclass
-from typing import Dict, List, Optional
+from typing import Optional
 
 from remote_cmd.core.ssh_client import ConnectionConfig
 
@@ -49,7 +49,7 @@ class Host:
     port: int = 22
     password: Optional[str] = None
     key_filename: Optional[str] = None
-    tags: Optional[List[str]] = None
+    tags: Optional[list[str]] = None
     description: str = ""
 
     def __post_init__(self):
@@ -72,7 +72,7 @@ class Host:
             key_filename=self.key_filename,
         )
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """
         将主机配置转换为字典
 
@@ -82,7 +82,7 @@ class Host:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: Dict) -> "Host":
+    def from_dict(cls, data: dict) -> "Host":
         """
         从字典创建主机配置对象
 

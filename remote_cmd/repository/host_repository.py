@@ -6,8 +6,9 @@
 未来可实现: SqliteHostRepository, YamlHostRepository
 """
 
+import builtins
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import Optional
 
 from remote_cmd.core.host import Host
 
@@ -31,12 +32,12 @@ class HostRepository(ABC):
         ...
 
     @abstractmethod
-    def list(self, tag: Optional[str] = None) -> List[Host]:
+    def list(self, tag: Optional[str] = None) -> list[Host]:
         """列出主机，可选按标签筛选"""
         ...
 
     @abstractmethod
-    def list_tags(self) -> List[str]:
+    def list_tags(self) -> builtins.list[str]:
         """列出所有标签"""
         ...
 

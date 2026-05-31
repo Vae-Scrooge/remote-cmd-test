@@ -11,10 +11,11 @@ Async SSH 客户端与连接池实现（基于 asyncio 进行封装）
 """
 
 import asyncio
+import contextlib
 import logging
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from .ssh_client import CommandResult, ConnectionConfig, SSHClient
 
@@ -53,7 +54,7 @@ class AsyncSSHClient:
         self,
         command: str,
         timeout: Optional[int] = None,
-        environment: Optional[Dict[str, str]] = None,
+        environment: Optional[dict[str, str]] = None,
     ) -> CommandResult:
         return await self._loop.run_in_executor(
             None, self._execute_sync, command, timeout, environment
@@ -75,7 +76,7 @@ class AsyncSSHClient:
     async def download_file(self, remote_path: str, local_path: str) -> None:
         return await self._loop.run_in_executor(None, self._download_sync, remote_path, local_path)
 
-    async def list_remote_directory(self, remote_path: str = ".") -> List[Dict[str, Any]]:
+    async def list_remote_directory(self, remote_path: str = ".") -> list[dict[str, Any]]:
         return await self._loop.run_in_executor(None, self._list_dir_sync, remote_path)
 
     # ------------------------------------------------------------------
@@ -93,7 +94,7 @@ class AsyncSSHClient:
         self,
         command: str,
         timeout: Optional[int] = None,
-        environment: Optional[Dict[str, str]] = None,
+        environment: Optional[dict[str, str]] = None,
     ) -> CommandResult:
         return self._sync.execute(command, timeout=timeout, environment=environment)
 
@@ -111,7 +112,7 @@ class AsyncSSHClient:
     def _download_sync(self, remote_path: str, local_path: str) -> None:
         self._sync.download_file(remote_path, local_path)
 
-    def _list_dir_sync(self, remote_path: str) -> List[Dict[str, Any]]:
+    def _list_dir_sync(self, remote_path: str) -> list[dict[str, Any]]:
         return self._sync.list_remote_directory(remote_path)
 
     # ------------------------------------------------------------------
@@ -153,7 +154,7 @@ class ConnectionPool:
         self._idle_timeout = idle_timeout
         self._health_check_interval = health_check_interval
         self._loop = loop or asyncio.get_event_loop()
-        self._connections: List[AsyncSSHClient] = []
+        self._connections: list[AsyncSSHClient] = []
         self._free: asyncio.Queue[AsyncSSHClient] = asyncio.Queue()
         self._lock = asyncio.Lock()
 
@@ -166,7 +167,7 @@ class ConnectionPool:
         # 后台监控任务
         self._monitor_task: Optional[asyncio.Task] = None
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """获取连接池指标"""
         return {
             "active": self._total_created - self._total_released,
@@ -235,17 +236,15 @@ class ConnectionPool:
                 await conn.connect()
                 self._total_reconnects += 1
             return True
-        except Exception as e:
+        except (OSError, Exception) as e:  # noqa: BLE001
             logger.debug(f"连接 {conn._connection_id[:8]} 检查失败: {e}")
             self._total_failed += 1
             return False
 
     async def _close_connection(self, conn: AsyncSSHClient) -> None:
         """安全关闭连接"""
-        try:
+        with contextlib.suppress(Exception):
             await conn.disconnect()
-        except Exception:
-            pass
         if conn in self._connections:
             self._connections.remove(conn)
 
@@ -263,14 +262,12 @@ class ConnectionPool:
             try:
                 await self._free.put(conn)
                 self._total_released += 1
-            except Exception:
+            except asyncio.QueueFull:
                 await self._close_connection(conn)
                 self._total_released += 1
         else:
-            try:
+            with contextlib.suppress(Exception):
                 await conn.disconnect()
-            except Exception:
-                pass
             if conn in self._connections:
                 self._connections.remove(conn)
             self._total_released += 1
@@ -295,7 +292,7 @@ class ConnectionPool:
                 await self._cleanup_expired()
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning(f"连接池监控异常: {e}")
 
     async def _cleanup_expired(self) -> None:
@@ -348,7 +345,5 @@ class ConnectionPool:
     async def __aexit__(self, exc_type, exc, tb):
         self.stop_monitor()
         for c in self._connections:
-            try:
+            with contextlib.suppress(Exception):
                 await c.disconnect()
-            except Exception:
-                pass

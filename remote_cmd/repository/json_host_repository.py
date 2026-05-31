@@ -8,12 +8,14 @@ JSON 文件主机仓库实现
 - 自动从旧版本迁移
 """
 
+import builtins
+import contextlib
 import json
 import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 from remote_cmd.core.host import Host
 from remote_cmd.repository.host_repository import HostRepository
@@ -43,7 +45,7 @@ class JsonHostRepository(HostRepository):
     ):
         self._filepath = Path(filepath)
         self._encryption = encryption
-        self._hosts: Dict[str, Host] = {}
+        self._hosts: dict[str, Host] = {}
 
         if auto_load and self._filepath.exists():
             self._load()
@@ -66,13 +68,13 @@ class JsonHostRepository(HostRepository):
             raise KeyError(f"主机 '{name}' 不存在")
         del self._hosts[name]
 
-    def list(self, tag: Optional[str] = None) -> List[Host]:
+    def list(self, tag: Optional[str] = None) -> list[Host]:
         hosts = list(self._hosts.values())
         if tag:
             hosts = [h for h in hosts if h.tags and tag in h.tags]
         return hosts
 
-    def list_tags(self) -> List[str]:
+    def list_tags(self) -> builtins.list[str]:
         tags: set = set()
         for host in self._hosts.values():
             if host.tags:
@@ -94,7 +96,7 @@ class JsonHostRepository(HostRepository):
         data = self._serialize_hosts()
         self._atomic_write(data)
 
-    def _serialize_hosts(self) -> Dict:
+    def _serialize_hosts(self) -> dict:
         """序列化主机列表到字典，包含版本信息"""
         hosts_dict = {name: host.to_dict() for name, host in self._hosts.items()}
 
@@ -135,17 +137,17 @@ class JsonHostRepository(HostRepository):
             if pw and self._encryption and self._encryption.is_encrypted(pw):
                 try:
                     host_data["password"] = self._encryption.decrypt(pw)
-                except Exception as e:
+                except (ValueError, TypeError, KeyError) as e:
                     logger.error(f"解密主机 '{name}' 密码失败: {e}")
                     host_data["password"] = None
 
             try:
                 host = Host.from_dict(host_data)
                 self._hosts[name] = host
-            except Exception as e:
+            except (ValueError, TypeError, KeyError) as e:
                 logger.warning(f"跳过无效主机 '{name}': {e}")
 
-    def _atomic_write(self, data: Dict) -> None:
+    def _atomic_write(self, data: dict) -> None:
         """原子写入：写临时文件 → rename 覆盖原文件"""
         self._filepath.parent.mkdir(parents=True, exist_ok=True)
 
@@ -160,10 +162,8 @@ class JsonHostRepository(HostRepository):
             os.replace(tmp_path, str(self._filepath))
         except Exception:
             # 清理临时文件
-            try:
+            with contextlib.suppress(OSError):
                 os.unlink(tmp_path)
-            except OSError:
-                pass
             raise
 
         logger.debug(f"已保存 {self.count()} 个主机配置到 {self._filepath}")
@@ -172,10 +172,10 @@ class JsonHostRepository(HostRepository):
     # 批量操作
     # ========================================================================
 
-    def load_from_dict(self, data: Dict[str, Host]) -> None:
+    def load_from_dict(self, data: dict[str, Host]) -> None:
         """从字典批量加载主机（替换当前所有）"""
         self._hosts = dict(data)
 
-    def to_dict(self) -> Dict[str, Host]:
+    def to_dict(self) -> dict[str, Host]:
         """导出所有主机的字典"""
         return dict(self._hosts)

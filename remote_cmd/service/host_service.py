@@ -24,7 +24,7 @@
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import Optional
 
 from remote_cmd.core.host import Host
 from remote_cmd.core.ssh_client import SSHClient
@@ -125,9 +125,12 @@ class HostService:
                 setattr(host, key, value)
 
         # 如果密码被更新，重新加密
-        if "password" in kwargs and kwargs["password"] is not None:
-            if not self._encryption.is_encrypted(kwargs["password"]):
-                host.password = self._encryption.encrypt(kwargs["password"])
+        if (
+            "password" in kwargs
+            and kwargs["password"] is not None
+            and not self._encryption.is_encrypted(kwargs["password"])
+        ):
+            host.password = self._encryption.encrypt(kwargs["password"])
 
         self._repo.save(host)
         self._repo.flush()
@@ -140,12 +143,12 @@ class HostService:
         self._repo.flush()
         logger.info(f"已删除主机: {name}")
 
-    def list_hosts(self, tag: Optional[str] = None) -> List[Host]:
+    def list_hosts(self, tag: Optional[str] = None) -> list[Host]:
         """列出主机（密码自动解密）"""
         hosts = self._repo.list(tag=tag)
         return [self._decrypt_host(h) for h in hosts]
 
-    def list_tags(self) -> List[str]:
+    def list_tags(self) -> list[str]:
         """列出所有标签"""
         return self._repo.list_tags()
 
@@ -192,12 +195,12 @@ class HostService:
             key_filename=host.key_filename,
         )
 
-    def test_all_connections(self, max_workers: int = 10) -> Dict[str, bool]:
+    def test_all_connections(self, max_workers: int = 10) -> dict[str, bool]:
         """并行测试所有主机连接"""
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
         hosts = self._repo.list()
-        results: Dict[str, bool] = {}
+        results: dict[str, bool] = {}
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_map = {executor.submit(self.test_connection, h.name): h.name for h in hosts}
@@ -205,7 +208,7 @@ class HostService:
                 name = future_map[future]
                 try:
                     results[name] = future.result()
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     logger.error(f"主机 {name} 连接测试异常: {e}")
                     results[name] = False
 
@@ -226,7 +229,7 @@ class HostService:
                     tags=host.tags,
                     description=host.description,
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning(f"密码解密失败 ({host.name}): {e}")
         return host
 

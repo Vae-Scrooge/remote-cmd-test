@@ -278,7 +278,7 @@ def run(ctx, host_name: str, command: str):
 
             ctx.exit(result.exit_code)
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         click.echo(f"✗ 错误: {e}", err=True)
         ctx.exit(1)
 
@@ -302,23 +302,23 @@ def upload(ctx, host_name: str, local_path: str, remote_path: str):
         with service.connect_to_host(host_name) as client:
             client.upload_file(local_path, remote_path)
             click.echo(f"✓ 上传成功: {local_path} -> {host_name}:{remote_path}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         click.echo(f"✗ 错误: {e}", err=True)
         ctx.exit(1)
 
 
 @cli.command()
 @click.argument("host_name", required=True)
-@click.argument("remote_path", required=True)
 @click.argument("local_path", required=True)
+@click.argument("remote_path", required=True)
 @click.pass_context
-def download(ctx, host_name: str, remote_path: str, local_path: str):
+def download(ctx, host_name: str, local_path: str, remote_path: str):
     """
     从远程主机下载文件
 
     HOST_NAME: 主机名称
-    REMOTE_PATH: 远程文件路径
-    LOCAL_PATH: 本地目标路径
+    LOCAL_PATH: 本地文件路径
+    REMOTE_PATH: 远程目标路径
     """
     service: HostService = ctx.obj["service"]
 
@@ -326,7 +326,7 @@ def download(ctx, host_name: str, remote_path: str, local_path: str):
         with service.connect_to_host(host_name) as client:
             client.download_file(remote_path, local_path)
             click.echo(f"✓ 下载成功: {host_name}:{remote_path} -> {local_path}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         click.echo(f"✗ 错误: {e}", err=True)
         ctx.exit(1)
 
@@ -379,7 +379,7 @@ def batch_run(
         show_percent=True,
     ) as bar:
 
-        def progress(completed, total, host_name):
+        def progress(_completed, _total, _host_name):
             bar.update(1)
 
         result = executor.execute(
