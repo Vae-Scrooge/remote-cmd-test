@@ -51,18 +51,16 @@ jobs:
     
     - name: Type check with mypy
       run: |
-        python -m mypy remote_cmd --no-strict-optional --ignore-missing-imports > /tmp/mypy-out.txt 2>&1
+        set -x
+        echo "=== mypy version ==="
+        python -m mypy --version
+        echo "=== config ==="
+        cat pyproject.toml | grep -A 20 "\[tool.mypy\]" || true
+        echo "=== running mypy ==="
+        python -m mypy remote_cmd --no-strict-optional --ignore-missing-imports 2>&1
         rc=$?
-        echo "mypy exit code: $rc" >&2
-        if [ -s /tmp/mypy-out.txt ]; then
-          echo "mypy output (first 20 lines):" >&2
-          head -20 /tmp/mypy-out.txt >&2
-        else
-          echo "mypy produced no output" >&2
-        fi
-        if [ $rc -ne 0 ]; then
-          exit $rc
-        fi
+        echo "=== exit code: $rc ==="
+        exit $rc
     
     - name: Run tests with pytest
       run: |
