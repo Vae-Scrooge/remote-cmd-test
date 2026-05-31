@@ -53,15 +53,18 @@ jobs:
         echo "=== sanity: mypy on a trivial file ==="
         echo 'x: int = 1' > /tmp/test_mypy.py
         mypy /tmp/test_mypy.py && echo "sanity OK" || echo "sanity FAILED"
-        echo "=== run mypy on each remote_cmd file individually ==="
-        for f in $(find remote_cmd -name '*.py' | sort); do
-          echo "--- mypy $f ---"
-          mypy "$f" --no-strict-optional --ignore-missing-imports 2>&1
-          echo "exit=$?"
-        done
-        echo "=== final: mypy on all remote_cmd ==="
+        echo "=== run mypy on all remote_cmd ==="
         mypy remote_cmd --no-strict-optional --ignore-missing-imports 2>&1
-        echo "final exit=$?"
+        echo "exit code: $?"
+    
+    - name: Upload mypy log on failure
+      if: failure()
+      run: |
+        find . -name 'mypy_*.log' -o -name '*.log' 2>/dev/null | head -20
+        # Write step output to GITHUB_STEP_SUMMARY
+        echo "## Mypy Debug Info" >> $GITHUB_STEP_SUMMARY
+        echo "Python version: $(python --version 2>&1)" >> $GITHUB_STEP_SUMMARY
+        echo "Mypy version: $(mypy --version 2>&1)" >> $GITHUB_STEP_SUMMARY
     
     - name: Run tests with pytest
       run: |
