@@ -53,9 +53,14 @@ jobs:
       run: |
         python -m mypy remote_cmd --no-strict-optional --ignore-missing-imports > /tmp/mypy-out.txt 2>&1
         rc=$?
+        echo "mypy exit code: $rc" >&2
+        if [ -s /tmp/mypy-out.txt ]; then
+          echo "mypy output (first 20 lines):" >&2
+          head -20 /tmp/mypy-out.txt >&2
+        else
+          echo "mypy produced no output" >&2
+        fi
         if [ $rc -ne 0 ]; then
-          cat /tmp/mypy-out.txt
-          echo "::error title=mypy output::$(cat /tmp/mypy-out.txt | tr '\n' '; ')"
           exit $rc
         fi
     
