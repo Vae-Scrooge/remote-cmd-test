@@ -45,24 +45,7 @@ jobs:
         ruff format remote_cmd tests --check
     
     - name: Type check with mypy
-      run: |
-        echo "::group::Sanity check"
-        mypy --version
-        echo 'x: int = 1' > /tmp/test_mypy.py
-        mypy /tmp/test_mypy.py && echo "sanity OK" || echo "sanity FAILED"
-        echo "::endgroup::"
-        echo "::group::Project check"
-        python -c "
-import subprocess, sys
-result = subprocess.run(
-    [sys.executable, '-m', 'mypy', 'remote_cmd', '--no-strict-optional', '--ignore-missing-imports'],
-    capture_output=True, text=True
-)
-print('STDOUT:', repr(result.stdout))
-print('STDERR:', repr(result.stderr))
-print('RC:', result.returncode)
-sys.exit(result.returncode)
-"
+      run: mypy remote_cmd --no-strict-optional --ignore-missing-imports
     
     - name: Run tests with pytest
       run: |
