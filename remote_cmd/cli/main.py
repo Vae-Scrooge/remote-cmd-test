@@ -16,7 +16,7 @@
 """
 
 import os
-from typing import Optional
+from typing import Any, Optional
 
 import click
 
@@ -372,6 +372,7 @@ def batch_run(
     click.echo(f"批量执行: {len(host_names)} 台主机, 命令='{command}', 并发={concurrency}")
     click.echo()
 
+    bar: Any
     with click.progressbar(
         length=len(host_names),
         label="执行进度",
