@@ -45,7 +45,23 @@ jobs:
         ruff format remote_cmd tests --check
     
     - name: Type check with mypy
-      run: mypy remote_cmd --no-strict-optional --ignore-missing-imports --no-config-file
+      run: |
+        echo "=== mypy version ==="
+        mypy --version
+        echo "=== python version ==="
+        python --version
+        echo "=== sanity: mypy on a trivial file ==="
+        echo 'x: int = 1' > /tmp/test_mypy.py
+        mypy /tmp/test_mypy.py && echo "sanity OK" || echo "sanity FAILED"
+        echo "=== run mypy on each remote_cmd file individually ==="
+        for f in $(find remote_cmd -name '*.py' | sort); do
+          echo "--- mypy $f ---"
+          mypy "$f" --no-strict-optional --ignore-missing-imports 2>&1
+          echo "exit=$?"
+        done
+        echo "=== final: mypy on all remote_cmd ==="
+        mypy remote_cmd --no-strict-optional --ignore-missing-imports 2>&1
+        echo "final exit=$?"
     
     - name: Run tests with pytest
       run: |
