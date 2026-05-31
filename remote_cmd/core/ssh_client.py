@@ -68,11 +68,20 @@ class ConnectionConfig:
     key_filename: Optional[str] = None
     timeout: int = 30
     compress: bool = True
-    host_key_policy: Any = field(default_factory=lambda: paramiko.WarningPolicy())
+    host_key_policy: Optional[Any] = None
+    known_hosts_file: Optional[str] = None
 
     def __post_init__(self):
-        """初始化后验证：密码和密钥文件至少有一个，或者使用 SSH Agent"""
-        # password 和 key_filename 可以同时为 None，此时使用 SSH Agent
+        """初始化后验证：校验端口、主机名等"""
+        # 验证端口号
+        if not (1 <= self.port <= 65535):
+            raise ValueError(f"端口号必须在 1-65535 之间，当前值: {self.port}")
+
+        # 验证主机名/IP 不为空
+        if not self.hostname or not self.hostname.strip():
+            raise ValueError("主机名不能为空")
+        if not self.username or not self.username.strip():
+            raise ValueError("用户名不能为空")
 
 
 @dataclass
@@ -189,8 +198,19 @@ class SSHClient:
             # 创建 SSH 客户端实例
             self._client = paramiko.SSHClient()
 
-            # 设置主机密钥策略（默认为 WarningPolicy，生产环境建议使用 RejectPolicy）
-            self._client.set_missing_host_key_policy(self.config.host_key_policy)
+            # 设置主机密钥策略
+            policy = self.config.host_key_policy or paramiko.RejectPolicy()
+            self._client.set_missing_host_key_policy(policy)
+
+            # 加载 known_hosts 文件（可选）
+            known_hosts = self.config.known_hosts_file
+            if known_hosts:
+                known_hosts_path = Path(known_hosts).expanduser()
+                if known_hosts_path.exists():
+                    self._client.load_host_keys(str(known_hosts_path))
+                    logger.debug(f"已加载 known_hosts: {known_hosts_path}")
+                else:
+                    logger.warning(f"known_hosts 文件不存在: {known_hosts_path}")
 
             # 构建连接参数字典
             connect_kwargs = {

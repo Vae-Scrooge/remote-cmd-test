@@ -1,0 +1,181 @@
+"""
+JSON 文件主机仓库实现
+
+使用 JSON 文件存储主机配置，支持：
+- 原子写入（先写临时文件再重命名，防止崩溃导致数据丢失）
+- 可选加密（通过 CredentialEncryption 加密 password 字段）
+- 配置版本管理
+- 自动从旧版本迁移
+"""
+
+import json
+import os
+import logging
+import tempfile
+from pathlib import Path
+from typing import Dict, List, Optional
+
+from remote_cmd.core.host import Host
+from remote_cmd.repository.host_repository import HostRepository
+from remote_cmd.utils.crypto import CredentialEncryption
+
+logger = logging.getLogger(__name__)
+
+# 当前配置版本
+CONFIG_VERSION = 2
+
+
+class JsonHostRepository(HostRepository):
+    """
+    JSON 文件主机仓库
+
+    Args:
+        filepath: JSON 文件路径
+        encryption: 可选的凭据加密器（设置后自动加密 password）
+        auto_load: 初始化时是否自动加载已有文件（默认 True）
+    """
+
+    def __init__(
+        self,
+        filepath: str,
+        encryption: Optional[CredentialEncryption] = None,
+        auto_load: bool = True,
+    ):
+        self._filepath = Path(filepath)
+        self._encryption = encryption
+        self._hosts: Dict[str, Host] = {}
+
+        if auto_load and self._filepath.exists():
+            self._load()
+
+    # ========================================================================
+    # Repository 接口实现
+    # ========================================================================
+
+    def save(self, host: Host) -> None:
+        """保存主机到内存，随后需要调用 flush() 写入文件"""
+        self._hosts[host.name] = host
+
+    def get(self, name: str) -> Host:
+        if name not in self._hosts:
+            raise KeyError(f"主机 '{name}' 不存在")
+        return self._hosts[name]
+
+    def delete(self, name: str) -> None:
+        if name not in self._hosts:
+            raise KeyError(f"主机 '{name}' 不存在")
+        del self._hosts[name]
+
+    def list(self, tag: Optional[str] = None) -> List[Host]:
+        hosts = list(self._hosts.values())
+        if tag:
+            hosts = [h for h in hosts if h.tags and tag in h.tags]
+        return hosts
+
+    def list_tags(self) -> List[str]:
+        tags: set = set()
+        for host in self._hosts.values():
+            if host.tags:
+                tags.update(host.tags)
+        return sorted(tags)
+
+    def contains(self, name: str) -> bool:
+        return name in self._hosts
+
+    def count(self) -> int:
+        return len(self._hosts)
+
+    # ========================================================================
+    # 持久化
+    # ========================================================================
+
+    def flush(self) -> None:
+        """原子写入 JSON 文件"""
+        data = self._serialize_hosts()
+        self._atomic_write(data)
+
+    def _serialize_hosts(self) -> Dict:
+        """序列化主机列表到字典，包含版本信息"""
+        hosts_dict = {name: host.to_dict() for name, host in self._hosts.items()}
+
+        # 加密密码
+        if self._encryption:
+            for host_data in hosts_dict.values():
+                pw = host_data.get("password")
+                if pw and not self._encryption.is_encrypted(pw):
+                    host_data["password"] = self._encryption.encrypt(pw)
+
+        return {
+            "version": CONFIG_VERSION,
+            "hosts": hosts_dict,
+        }
+
+    def _load(self) -> None:
+        """从 JSON 文件加载主机配置"""
+        try:
+            with open(self._filepath, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError) as e:
+            logger.warning(f"加载配置文件失败: {e}")
+            return
+
+        # 检查版本并迁移
+        version = raw.get("version", 1)
+        if version < CONFIG_VERSION:
+            logger.info(f"配置版本 {version} -> {CONFIG_VERSION}，执行迁移")
+
+        hosts_data = raw.get("hosts", raw if version == 1 else {})
+        # 兼容 v1 格式（hosts 直接在最外层）
+        if version == 1 and isinstance(hosts_data, dict):
+            pass  # hosts_data 已经是正确的格式
+
+        self._hosts = {}
+        for name, host_data in hosts_data.items():
+            pw = host_data.get("password")
+            if pw and self._encryption and self._encryption.is_encrypted(pw):
+                try:
+                    host_data["password"] = self._encryption.decrypt(pw)
+                except Exception as e:
+                    logger.error(f"解密主机 '{name}' 密码失败: {e}")
+                    host_data["password"] = None
+
+            try:
+                host = Host.from_dict(host_data)
+                self._hosts[name] = host
+            except Exception as e:
+                logger.warning(f"跳过无效主机 '{name}': {e}")
+
+    def _atomic_write(self, data: Dict) -> None:
+        """原子写入：写临时文件 → rename 覆盖原文件"""
+        self._filepath.parent.mkdir(parents=True, exist_ok=True)
+
+        fd, tmp_path = tempfile.mkstemp(
+            suffix=".tmp",
+            prefix=f"{self._filepath.name}.",
+            dir=self._filepath.parent,
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            os.replace(tmp_path, str(self._filepath))
+        except Exception:
+            # 清理临时文件
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
+
+        logger.debug(f"已保存 {self.count()} 个主机配置到 {self._filepath}")
+
+    # ========================================================================
+    # 批量操作
+    # ========================================================================
+
+    def load_from_dict(self, data: Dict[str, Host]) -> None:
+        """从字典批量加载主机（替换当前所有）"""
+        self._hosts = dict(data)
+
+    def to_dict(self) -> Dict[str, Host]:
+        """导出所有主机的字典"""
+        return dict(self._hosts)

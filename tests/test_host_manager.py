@@ -72,11 +72,13 @@ def test_persistence_save_and_load(tmp_path):
     path = tmp_path / "hosts.json"
     m.save_to_file(path)
 
-    # verify JSON structure is valid
+    # verify JSON structure (versioned format)
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
-    assert isinstance(data, dict) and len(data) == 2
-    assert "srvA" in data and "srvB" in data
+    assert isinstance(data, dict)
+    assert data["version"] == 2
+    assert isinstance(data["hosts"], dict) and len(data["hosts"]) == 2
+    assert "srvA" in data["hosts"] and "srvB" in data["hosts"]
 
     # load_from_file reconstructs hosts
     m2 = HostManager()

@@ -318,7 +318,7 @@ class TestHostTest:
                 ],
             )
             with patch(
-                "remote_cmd.core.host_manager.HostManager.test_connection",
+                "remote_cmd.service.host_service.HostService.test_connection",
                 return_value=True,
             ):
                 result = runner.invoke(
@@ -346,7 +346,7 @@ class TestHostTest:
                 ],
             )
             with patch(
-                "remote_cmd.core.host_manager.HostManager.test_connection",
+                "remote_cmd.service.host_service.HostService.test_connection",
                 return_value=False,
             ):
                 result = runner.invoke(

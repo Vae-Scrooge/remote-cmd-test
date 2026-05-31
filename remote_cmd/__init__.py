@@ -11,6 +11,8 @@ Remote CMD - SSH 远程服务器管理工具
     - 主机配置管理
     - 标签分类系统
     - 批量连接测试
+    - 凭据加密存储
+    - 结构化日志系统
 
 快速开始：
     >>> from remote_cmd import SSHClient, HostManager
@@ -27,6 +29,14 @@ Remote CMD - SSH 远程服务器管理工具
     >>> with SSHClient(config) as client:
     ...     result = client.execute("ls -la")
     ...     print(result.stdout)
+
+新架构（推荐）:
+    >>> from remote_cmd.repository.json_host_repository import JsonHostRepository
+    >>> from remote_cmd.service.host_service import HostService
+    >>>
+    >>> repo = JsonHostRepository("hosts.json")
+    >>> service = HostService(repo)
+    >>> service.add_host(host)
 
 命令行使用：
     $ remote-cmd host add server1 192.168.1.100 admin -k ~/.ssh/id_rsa
@@ -47,22 +57,53 @@ __author__ = "Vae-Scrooge"
 __email__ = "vae-scrooge@example.com"
 __license__ = "MIT"
 
-# 配置包级别日志（默认不输出，由应用层决定日志级别和处理方式）
 import logging
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
-# 导出主要类，便于直接从包级别导入
+# 向后兼容导出（原有 API）
 from remote_cmd.core.ssh_client import SSHClient
 from remote_cmd.core.async_client import AsyncSSHClient, ConnectionPool
 from remote_cmd.core.host_manager import HostManager
+from remote_cmd.core.host import Host
+
+# 新架构导出（推荐）
+from remote_cmd.repository import HostRepository, JsonHostRepository
+from remote_cmd.service import (
+    HostService,
+    SSHService,
+    CredentialProvider,
+    EnvCredentialProvider,
+    ChainCredentialProvider,
+)
+from remote_cmd.utils.crypto import CredentialEncryption
+from remote_cmd.utils.logging_utils import (
+    setup_logging,
+    SensitiveDataFilter,
+    get_logger,
+)
 
 # 定义公开 API
 __all__ = [
+    # 原有导出（向后兼容）
     "SSHClient",
     "AsyncSSHClient",
     "ConnectionPool",
     "HostManager",
+    "Host",
+    # 新架构导出
+    "HostRepository",
+    "JsonHostRepository",
+    "HostService",
+    "SSHService",
+    "CredentialProvider",
+    "EnvCredentialProvider",
+    "ChainCredentialProvider",
+    "CredentialEncryption",
+    "setup_logging",
+    "SensitiveDataFilter",
+    "get_logger",
+    # 元信息
     "__version__",
     "__author__",
     "__license__",
