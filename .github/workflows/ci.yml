@@ -44,9 +44,14 @@ jobs:
       run: |
         ruff format remote_cmd tests --check
     
+    - name: Debug mypy install
+      run: |
+        python -m mypy --version
+        pip show mypy 2>/dev/null || true
+    
     - name: Type check with mypy
       run: |
-        mypy remote_cmd --no-strict-optional --ignore-missing-imports
+        python -m mypy remote_cmd --no-strict-optional --ignore-missing-imports 2>&1
     
     - name: Run tests with pytest
       run: |
