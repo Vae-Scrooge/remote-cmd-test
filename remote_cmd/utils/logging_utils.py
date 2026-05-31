@@ -156,7 +156,7 @@ def setup_logging(
         getattr(logging, level.upper(), logging.INFO)
     )
 
-    logger.debug("日志系统已初始化")
+    logging.getLogger("remote_cmd").debug("日志系统已初始化")
 
 
 class LoggerAdapter(logging.LoggerAdapter):
