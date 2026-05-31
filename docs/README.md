@@ -56,7 +56,7 @@ docs/
 如果在阅读文档后仍有疑问：
 
 1. 查看 [故障排查指南](./TROUBLESHOOTING.md)
-2. 搜索 [GitHub Issues](https://github.com/Vae-Scrooge/remote-cmd-test/issues)
+2. 搜索 [GitHub Issues](https://github.com/Vae-Scrooge/remote-cmd/issues)
 3. 提交新的 Issue
 
 ## 贡献文档

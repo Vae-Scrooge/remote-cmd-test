@@ -5,18 +5,18 @@ with open("README.md", encoding="utf-8") as fh:
 
 setup(
     name="remote_cmd_manager",
-    version="1.0.0",
+    version="1.0.1",
     author="Vae-Scrooge",
     author_email="vaescrooge@gmail.com",
     description="A Python-based SSH remote server management tool",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/Vae-Scrooge/remote-cmd-test",
+    url="https://github.com/Vae-Scrooge/remote-cmd",
     download_url="https://pypi.org/project/remote_cmd_manager/",
     project_urls={
-        "Source Code": "https://github.com/Vae-Scrooge/remote-cmd-test",
-        "Bug Tracker": "https://github.com/Vae-Scrooge/remote-cmd-test/issues",
-        "Documentation": "https://github.com/Vae-Scrooge/remote-cmd-test#readme",
+        "Source Code": "https://github.com/Vae-Scrooge/remote-cmd",
+        "Bug Tracker": "https://github.com/Vae-Scrooge/remote-cmd/issues",
+        "Documentation": "https://github.com/Vae-Scrooge/remote-cmd#readme",
     },
     packages=find_packages(),
     classifiers=[

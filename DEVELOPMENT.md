@@ -11,8 +11,8 @@
 ### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/Vae-Scrooge/remote-cmd-test.git
-cd remote-cmd-test
+git clone https://github.com/Vae-Scrooge/remote-cmd.git
+cd remote-cmd
 ```
 
 ### 2. 创建虚拟环境
@@ -44,7 +44,7 @@ pytest tests/ -v
 ## 项目结构
 
 ```
-remote-cmd-test/
+remote-cmd/
 ├── remote_cmd/          # 主代码包
 │   ├── core/            # 核心功能（SSHClient、HostManager）
 │   ├── cli/             # 命令行接口

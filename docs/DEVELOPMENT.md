@@ -18,8 +18,8 @@
 ### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/Vae-Scrooge/remote-cmd-test.git
-cd remote-cmd-test
+git clone https://github.com/Vae-Scrooge/remote-cmd.git
+cd remote-cmd
 ```
 
 ### 2. 创建虚拟环境
@@ -65,7 +65,7 @@ mypy remote_cmd/
 ## 项目结构
 
 ```
-remote-cmd-test/
+remote-cmd/
 ├── remote_cmd/                 # 主代码包
 │   ├── __init__.py            # 包初始化
 │   ├── core/                  # 核心功能
@@ -561,7 +561,7 @@ rm -rf build/ dist/ *.egg-info
 - 查看 [API 文档](./API.md)
 - 阅读 [架构文档](./architecture.md)
 - 参考 [贡献指南](../CONTRIBUTING.md)
-- 提交 [Issue](https://github.com/Vae-Scrooge/remote-cmd-test/issues)
+- 提交 [Issue](https://github.com/Vae-Scrooge/remote-cmd/issues)
 
 ---
 

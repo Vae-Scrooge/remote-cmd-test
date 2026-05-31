@@ -941,7 +941,7 @@ except SSHFileTransferError as e:
 
 ## 反馈
 
-如果您发现 API 文档有误或需要补充，请提交 [Issue](https://github.com/Vae-Scrooge/remote-cmd-test/issues)。
+如果您发现 API 文档有误或需要补充，请提交 [Issue](https://github.com/Vae-Scrooge/remote-cmd/issues)。
 
 ---
 

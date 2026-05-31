@@ -661,7 +661,7 @@ python -m remote_cmd --verbose host test my-server 2>&1 | tee error.log
 
 ### 2. 提交 Issue
 
-访问 [GitHub Issues](https://github.com/Vae-Scrooge/remote-cmd-test/issues) 并提交问题，请包含：
+访问 [GitHub Issues](https://github.com/Vae-Scrooge/remote-cmd/issues) 并提交问题，请包含：
 
 - 问题描述
 - 复现步骤
@@ -671,7 +671,7 @@ python -m remote_cmd --verbose host test my-server 2>&1 | tee error.log
 
 ### 3. 其他资源
 
-- [GitHub Discussions](https://github.com/Vae-Scrooge/remote-cmd-test/discussions) - 社区讨论
+- [GitHub Discussions](https://github.com/Vae-Scrooge/remote-cmd/discussions) - 社区讨论
 - [API 文档](./API.md) - API 参考
 - [开发指南](./DEVELOPMENT.md) - 开发相关
 

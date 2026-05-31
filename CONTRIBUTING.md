@@ -27,7 +27,7 @@
 
 ### 1. 报告 Bug
 
-如果您发现了 Bug，请通过 [GitHub Issues](https://github.com/Vae-Scrooge/remote-cmd-test/issues) 提交。
+如果您发现了 Bug，请通过 [GitHub Issues](https://github.com/Vae-Scrooge/remote-cmd/issues) 提交。
 
 **提交 Bug 时请包含：**
 
@@ -119,11 +119,11 @@
 # 在 GitHub 上点击 Fork 按钮
 
 # 2. 克隆您的 Fork
-git clone https://github.com/YOUR_USERNAME/remote-cmd-test.git
-cd remote-cmd-test
+git clone https://github.com/YOUR_USERNAME/remote-cmd.git
+cd remote-cmd
 
 # 3. 添加上游仓库
-git remote add upstream https://github.com/Vae-Scrooge/remote-cmd-test.git
+git remote add upstream https://github.com/Vae-Scrooge/remote-cmd.git
 
 # 4. 创建虚拟环境
 python -m venv venv
@@ -447,7 +447,7 @@ Closes #(issue 编号)
 对于使用问题，请先：
 
 1. 查看 [文档](README.md)
-2. 搜索 [Issues](https://github.com/Vae-Scrooge/remote-cmd-test/issues)
+2. 搜索 [Issues](https://github.com/Vae-Scrooge/remote-cmd/issues)
 3. 查看 [故障排查指南](TROUBLESHOOTING.md)
 
 如果仍有问题，欢迎创建 Issue 或使用 GitHub Discussions。
@@ -486,8 +486,8 @@ black remote_cmd/ && isort remote_cmd/
 
 感谢所有为这个项目做出贡献的人！
 
-<a href="https://github.com/Vae-Scrooge/remote-cmd-test/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Vae-Scrooge/remote-cmd-test" />
+<a href="https://github.com/Vae-Scrooge/remote-cmd/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Vae-Scrooge/remote-cmd" />
 </a>
 
 ---

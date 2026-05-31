@@ -92,4 +92,4 @@
 
 ---
 
-**查看完整历史：** [GitHub Releases](https://github.com/Vae-Scrooge/remote-cmd-test/releases)
+**查看完整历史：** [GitHub Releases](https://github.com/Vae-Scrooge/remote-cmd/releases)

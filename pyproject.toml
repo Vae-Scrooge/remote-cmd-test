@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "remote_cmd_manager"
-version = "1.0.0"
+version = "1.0.1"
 description = "SSH 远程服务器管理工具 / Python SSH remote server management tool"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -31,14 +31,16 @@ dependencies = [
     "click>=8.0",
     "cryptography>=41.0",
     "rich>=13.0",
+    "PyYAML>=6.0",
+    "aiofiles>=3.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/Vae-Scrooge/remote-cmd-test"
-Repository = "https://github.com/Vae-Scrooge/remote-cmd-test"
-Documentation = "https://github.com/Vae-Scrooge/remote-cmd-test#readme"
-"Bug Tracker" = "https://github.com/Vae-Scrooge/remote-cmd-test/issues"
-Download = "https://pypi.org/project/remote-cmd/"
+Homepage = "https://github.com/Vae-Scrooge/remote-cmd"
+Repository = "https://github.com/Vae-Scrooge/remote-cmd"
+Documentation = "https://github.com/Vae-Scrooge/remote-cmd#readme"
+"Bug Tracker" = "https://github.com/Vae-Scrooge/remote-cmd/issues"
+Download = "https://pypi.org/project/remote_cmd_manager/"
 
 [project.scripts]
 remote-cmd = "remote_cmd.cli.main:main"

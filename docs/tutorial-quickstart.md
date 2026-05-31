@@ -59,8 +59,8 @@ pip install remote-cmd
 
 ```bash
 # 克隆仓库
-git clone https://github.com/Vae-Scrooge/remote-cmd-test.git
-cd remote-cmd-test
+git clone https://github.com/Vae-Scrooge/remote-cmd.git
+cd remote-cmd
 
 # 创建虚拟环境（可选但推荐）
 python -m venv venv
@@ -530,7 +530,7 @@ result = client.execute_sudo("systemctl restart nginx", password="sudopass")
 如果你遇到问题：
 
 1. 查看 [故障排查指南](./TROUBLESHOOTING.md)
-2. 搜索 [GitHub Issues](https://github.com/Vae-Scrooge/remote-cmd-test/issues)
+2. 搜索 [GitHub Issues](https://github.com/Vae-Scrooge/remote-cmd/issues)
 3. 提交新的 Issue
 
 ---

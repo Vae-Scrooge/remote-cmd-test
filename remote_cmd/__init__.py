@@ -44,7 +44,7 @@ Remote CMD - SSH 远程服务器管理工具
     $ remote-cmd run server1 "uptime"
 
 更多信息：
-    - GitHub: https://github.com/Vae-Scrooge/remote-cmd-test
+    - GitHub: https://github.com/Vae-Scrooge/remote-cmd
     - 文档: 参见 docs/ 目录
 
 Author: Vae-Scrooge
