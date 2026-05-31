@@ -372,7 +372,7 @@ def batch_run(
     click.echo(f"批量执行: {len(host_names)} 台主机, 命令='{command}', 并发={concurrency}")
     click.echo()
 
-    with click.progressbar(
+    with click.progressbar(  # type: ignore[var-annotated]
         length=len(host_names),
         label="执行进度",
         show_eta=True,

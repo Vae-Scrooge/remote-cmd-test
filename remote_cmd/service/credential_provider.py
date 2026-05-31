@@ -143,7 +143,7 @@ class KeyringCredentialProvider(CredentialProvider):
             Optional[str]: 密码，未找到或不可用时返回 None
         """
         try:
-            import keyring  # type: ignore[import-untyped]
+            import keyring
 
             password = keyring.get_password(self._service_name, host.name)
             if password:
@@ -168,7 +168,7 @@ class KeyringCredentialProvider(CredentialProvider):
             bool: 存储成功返回 True
         """
         try:
-            import keyring  # type: ignore[import-untyped]
+            import keyring
 
             keyring.set_password(self._service_name, host.name, password)
             return True
@@ -187,7 +187,7 @@ class KeyringCredentialProvider(CredentialProvider):
             bool: 删除成功返回 True
         """
         try:
-            import keyring  # type: ignore[import-untyped]
+            import keyring
 
             keyring.delete_password(self._service_name, host.name)
             return True

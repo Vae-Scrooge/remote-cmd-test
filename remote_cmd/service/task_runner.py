@@ -268,7 +268,7 @@ class TaskRunner:
         if not event.wait(timeout=timeout):
             raise TimeoutError(f"等待任务 '{task_id[:8]}' 超时")
 
-        return self.get_task(task_id)  # type: ignore[return-value]
+        return self.get_task(task_id)
 
     def cancel_all(self) -> int:
         """
@@ -336,7 +336,7 @@ class TaskRunner:
     @property
     def active_count(self) -> int:
         """当前运行中的任务数"""
-        return self._max_workers - self._semaphore._value  # type: ignore[attr-defined]
+        return self._max_workers - self._semaphore._value  # noqa: SLF001
 
     @property
     def pending_count(self) -> int:

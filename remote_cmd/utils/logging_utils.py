@@ -15,6 +15,7 @@
 import logging
 import re
 import sys
+from collections.abc import MutableMapping
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any, Optional
@@ -65,7 +66,7 @@ class SensitiveDataFilter(logging.Filter):
     @staticmethod
     def redact_dict(data: dict[str, Any]) -> dict[str, Any]:
         """递归脱敏字典中的敏感字段"""
-        result = {}
+        result: dict[str, Any] = {}
         for key, value in data.items():
             if key.lower() in SENSITIVE_FIELDS:
                 result[key] = "[REDACTED]"
@@ -169,7 +170,7 @@ class LoggerAdapter(logging.LoggerAdapter):
         # 输出: [host=web-server] 连接成功
     """
 
-    def process(self, msg: str, kwargs: dict[str, Any]) -> tuple:
+    def process(self, msg: str, kwargs: MutableMapping[str, Any]) -> tuple:
         ctx = " ".join(f"[{k}={v}]" for k, v in self.extra.items())
         return f"{ctx} {msg}" if ctx else msg, kwargs
 
@@ -179,7 +180,7 @@ class LoggerAdapter(logging.LoggerAdapter):
 # ============================================================================
 
 
-def get_logger(name: str, **context) -> logging.Logger:
+def get_logger(name: str, **context) -> logging.Logger | logging.LoggerAdapter:
     """
     获取带可选上下文的日志器
 
