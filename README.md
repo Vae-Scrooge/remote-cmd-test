@@ -17,14 +17,7 @@ pip install remote_cmd_manager
 
 </div>
 
-Ascii-cast demo:
-```
-$ remote-cmd host add web-01 192.168.1.10 ubuntu --key ~/.ssh/id_rsa
-$ remote-cmd host add db-01 192.168.1.11 ubuntu --key ~/.ssh/id_rsa
-$ remote-cmd batch-run -t production "df -h /"
-  ✓ web-01  → Disk: 32G/100G (32%)
-  ✓ db-01   → Disk: 45G/100G (45%)
-```
+[![asciicast](https://asciinema.org/a/9yLeYj73muPUuAQY.svg)](https://asciinema.org/a/9yLeYj73muPUuAQY)
 
 Remote CMD is a lightweight Python CLI + API for managing servers over SSH. Add hosts, run commands, transfer files, and target groups by tags — no Ansible DSL or shell loops required.
 
