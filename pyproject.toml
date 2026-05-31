@@ -101,5 +101,6 @@ module = [
     "click.*",
     "cryptography.*",
     "keyring.*",
+    "yaml",
 ]
 ignore_missing_imports = true
