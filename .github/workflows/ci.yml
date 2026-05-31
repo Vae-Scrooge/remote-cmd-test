@@ -46,25 +46,26 @@ jobs:
     
     - name: Type check with mypy
       run: |
-        echo "=== mypy version ==="
+        echo "::group::mypy version"
         mypy --version
-        echo "=== python version ==="
-        python --version
-        echo "=== sanity: mypy on a trivial file ==="
+        echo "::endgroup::"
+        echo "::group::sanity check"
         echo 'x: int = 1' > /tmp/test_mypy.py
         mypy /tmp/test_mypy.py && echo "sanity OK" || echo "sanity FAILED"
-        echo "=== run mypy on all remote_cmd ==="
-        mypy remote_cmd --no-strict-optional --ignore-missing-imports 2>&1
-        echo "exit code: $?"
-    
-    - name: Upload mypy log on failure
-      if: failure()
-      run: |
-        find . -name 'mypy_*.log' -o -name '*.log' 2>/dev/null | head -20
-        # Write step output to GITHUB_STEP_SUMMARY
-        echo "## Mypy Debug Info" >> $GITHUB_STEP_SUMMARY
-        echo "Python version: $(python --version 2>&1)" >> $GITHUB_STEP_SUMMARY
-        echo "Mypy version: $(mypy --version 2>&1)" >> $GITHUB_STEP_SUMMARY
+        echo "::endgroup::"
+        echo "::group::mypy output"
+        mypy remote_cmd --no-strict-optional --ignore-missing-imports 2>&1 | tee /tmp/mypy_output.txt
+        exit_code=${PIPESTATUS[0]}
+        echo "::endgroup::"
+        echo "::group::annotations"
+        if [ $exit_code -ne 0 ] && [ -s /tmp/mypy_output.txt ]; then
+          head -50 /tmp/mypy_output.txt > /tmp/mypy_head.txt
+          while IFS= read -r line; do
+            echo "::error title=mypy::$line"
+          done < /tmp/mypy_head.txt
+        fi
+        echo "::endgroup::"
+        exit $exit_code
     
     - name: Run tests with pytest
       run: |
