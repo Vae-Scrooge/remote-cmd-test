@@ -50,13 +50,20 @@ jobs:
     - name: Run tests with pytest
       run: |
         pytest tests/ --cov=remote_cmd --cov-report=xml --cov-report=term 2>&1 | tee pytest_output.txt
-        if [ ${PIPESTATUS[0]} -ne 0 ] && [ -s pytest_output.txt ]; then
-          head -30 pytest_output.txt > /tmp/pytest_anno.txt
+        exit_code=${PIPESTATUS[0]}
+        if [ $exit_code -ne 0 ] && [ -s pytest_output.txt ]; then
+          grep -E "FAILED|ERROR|failed" pytest_output.txt | head -10 > /tmp/pytest_errors.txt
           while IFS= read -r line; do
             echo "::error title=pytest::$line"
-          done < /tmp/pytest_anno.txt
+          done < /tmp/pytest_errors.txt
+          if [ ! -s /tmp/pytest_errors.txt ]; then
+            tail -5 pytest_output.txt > /tmp/pytest_tail.txt
+            while IFS= read -r line; do
+              echo "::error title=pytest-tail::$line"
+            done < /tmp/pytest_tail.txt
+          fi
         fi
-        exit ${PIPESTATUS[0]}
+        exit $exit_code
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
