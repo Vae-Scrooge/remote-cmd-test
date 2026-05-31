@@ -180,7 +180,7 @@ class LoggerAdapter(logging.LoggerAdapter):
 # ============================================================================
 
 
-def get_logger(name: str, **context) -> logging.Logger | logging.LoggerAdapter:
+def get_logger(name: str, **context) -> "logging.Logger | logging.LoggerAdapter":
     """
     获取带可选上下文的日志器
 
