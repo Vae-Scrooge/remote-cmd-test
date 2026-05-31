@@ -51,7 +51,11 @@ jobs:
     
     - name: Type check with mypy
       run: |
-        python -m mypy remote_cmd --no-strict-optional --ignore-missing-imports 2>&1
+        python -m mypy remote_cmd --no-strict-optional --ignore-missing-imports 2>&1 || {
+          rc=$?
+          echo "::error title=mypy check failed::mypy exited with code $rc"
+          exit $rc
+        }
     
     - name: Run tests with pytest
       run: |
