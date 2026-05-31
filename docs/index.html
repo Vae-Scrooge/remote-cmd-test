@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SSH Server Management Without the Ansible Overhead - remote-cmd</title>
+  <meta name="description" content="remote-cmd is a Python CLI + API for SSH server management. Host CRUD, batch execution, SFTP, and a Python API — zero setup, pip install and go.">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg-card: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --orange: #d29922;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      --mono: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+    h2 { font-size: 1.35rem; font-weight: 600; margin-top: 2.5rem; margin-bottom: 0.75rem; color: var(--accent); }
+    h3 { font-size: 1.1rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.5rem; }
+    p { margin-bottom: 1rem; color: var(--text-muted); }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .meta { color: var(--text-muted); font-size: 0.875rem; margin-bottom: 2rem; }
+    .meta a { color: var(--green); }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+    pre, code { font-family: var(--mono); }
+    code {
+      background: rgba(88,166,255,0.1);
+      color: var(--accent);
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      font-size: 0.875em;
+    }
+    pre {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
+      margin-bottom: 1.25rem;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    pre code { background: none; padding: 0; color: var(--text); font-size: 1em; }
+    .cmd-prompt { color: var(--green); }
+    .cmd-output { color: var(--text-muted); }
+    .check { color: var(--green); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.25rem 0;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.6rem 0.8rem;
+      text-align: left;
+    }
+    th { background: var(--bg-card); font-weight: 600; }
+    td { color: var(--text-muted); }
+    blockquote {
+      border-left: 3px solid var(--accent);
+      padding: 0.5rem 1rem;
+      margin: 1.25rem 0;
+      background: rgba(88,166,255,0.05);
+      border-radius: 0 6px 6px 0;
+      color: var(--text-muted);
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(63,185,80,0.15);
+      color: var(--green);
+      padding: 0.2rem 0.6rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 0.4rem;
+    }
+    .footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); font-size: 0.85rem; color: var(--text-muted); text-align: center; }
+    @media (max-width: 600px) {
+      h1 { font-size: 1.5rem; }
+      body { padding: 1.25rem 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <h1>SSH Server Management Without the Ansible Overhead</h1>
+    <p class="meta">
+      <span class="badge">python</span>
+      <span class="badge">ssh</span>
+      <span class="badge">cli</span>
+      <span class="badge">devops</span>
+      <br>
+      Published on <a href="https://news.ycombinator.com/item?id=48347202">Hacker News</a>
+      &middot; <a href="https://github.com/Vae-Scrooge/remote-cmd">GitHub</a>
+    </p>
+
+    <p>You SSH into 10 servers to check disk space. You write a quick for loop. A typo crashes one session. You're not sure which ones you've already checked. By the time you're done, 20 minutes are gone and you have a terminal full of scrollback you need to piece together.</p>
+
+    <p><strong>There's a better way.</strong></p>
+
+    <h2>The Problem</h2>
+
+    <p>Most developers SSH into servers one at a time. When you need to run the same command across multiple machines, your options are:</p>
+
+    <ol>
+      <li><strong>Open 10 terminals</strong> — error-prone, slow, no audit trail</li>
+      <li><strong>Write a shell loop</strong> — <code>for host in web-01 web-02 ...; do ssh $host "df -h"; done</code> — works until a host is down and your loop breaks</li>
+      <li><strong>Ansible</strong> — powerful, but you need to learn YAML DSL, write playbooks, manage inventory files. Overkill for "check disk space"</li>
+      <li><strong>Fabric</strong> — good Python library, but no built-in host management or CLI</li>
+    </ol>
+
+    <p>None of these give you a simple CLI that just works out of the box.</p>
+
+    <h2>Meet remote-cmd</h2>
+
+    <p><code>remote-cmd</code> is a Python CLI + API for SSH server management. It gives you:</p>
+
+    <ul>
+      <li>Host CRUD with tag-based grouping (<code>production</code>, <code>staging</code>, <code>web</code>, <code>db</code>)</li>
+      <li>One-shot command execution on single or multiple hosts</li>
+      <li>File upload/download via SFTP</li>
+      <li>A Python API for scripting automation</li>
+      <li>Zero setup — <code>pip install</code> and go</li>
+    </ul>
+
+    <h2>Quick Demo</h2>
+
+    <pre><code><span class="cmd-prompt">$</span> pip install remote_cmd_manager
+
+<span class="cmd-prompt">$</span> remote-cmd host add web-01 192.168.1.10 ubuntu --key ~/.ssh/id_rsa
+
+<span class="cmd-prompt">$</span> remote-cmd run web-01 "uptime"
+<span class="cmd-output">→ 14:32:10 up 45 days,  2:15,  1 user,  load average: 0.08, 0.03, 0.05</span>
+
+<span class="cmd-prompt">$</span> remote-cmd host add web-02 192.168.1.11 ubuntu --key ~/.ssh/id_rsa --tag production
+<span class="cmd-prompt">$</span> remote-cmd host add db-01 192.168.1.20 ubuntu --key ~/.ssh/id_rsa --tag production --tag database
+
+<span class="cmd-prompt">$</span> remote-cmd batch-run -t production "df -h /"
+<span class="check">✓</span> web-01  → Disk: 32G/100G (32%)
+<span class="check">✓</span> web-02  → Disk: 45G/100G (45%)
+<span class="check">✓</span> db-01   → Disk: 12G/50G  (24%)</code></pre>
+
+    <h2>Real-World Use Cases</h2>
+
+    <h3>Incident Response</h3>
+    <pre><code><span class="cmd-prompt">$</span> remote-cmd batch-run -t web "journalctl -xe -n 50 | grep -i error"</code></pre>
+
+    <h3>Deploy Code</h3>
+    <pre><code><span class="cmd-prompt">$</span> cat deploy.py
+<span style="color:#8b949e">from remote_cmd.core.host_manager import HostManager
+
+manager = HostManager("hosts.json")
+for host in manager.list_hosts(tag="staging"):
+    with manager.connect_to_host(host.name) as client:
+        client.execute("cd /app && git pull")
+        client.execute("pip install -r requirements.txt")
+        client.execute_sudo("systemctl restart app", password="sudopass")</span></code></pre>
+
+    <h3>Config Update</h3>
+    <pre><code><span class="cmd-prompt">$</span> remote-cmd upload web-01 ./nginx.conf /tmp/nginx.conf
+<span class="cmd-prompt">$</span> remote-cmd run web-01 "sudo cp /tmp/nginx.conf /etc/nginx/nginx.conf && sudo nginx -t && sudo systemctl reload nginx"</code></pre>
+
+    <h2>How It Stacks Up</h2>
+
+    <table>
+      <thead>
+        <tr><th></th><th>remote-cmd</th><th>ssh + shell</th><th>Ansible</th><th>Fabric</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Setup time</td><td>10 seconds</td><td>None (you know ssh)</td><td>30 min+</td><td>5 min</td></tr>
+        <tr><td>Host management</td><td>Built-in</td><td>Manual</td><td>Inventory YAML</td><td>Manual</td></tr>
+        <tr><td>CLI</td><td>Yes</td><td>Yes</td><td>ansible cmd</td><td>fab cmd</td></tr>
+        <tr><td>Python API</td><td>Yes</td><td>No</td><td>No (YAML)</td><td>Yes</td></tr>
+        <tr><td>Ideal for</td><td>Ad-hoc + scripts</td><td>One-off</td><td>Config mgmt</td><td>Python scripts</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Getting Started</h2>
+
+    <pre><code><span class="cmd-prompt">$</span> pip install remote_cmd_manager
+
+<span class="cmd-prompt">$</span> remote-cmd --help
+
+<span class="cmd-prompt">$</span> remote-cmd host add my-server 192.168.1.100 ubuntu --key ~/.ssh/id_rsa
+<span class="cmd-prompt">$</span> remote-cmd run my-server "uptime"</code></pre>
+
+    <p>The project is in beta, the core API is stable, and contributions are welcome.</p>
+
+    <p>If you SSH into more than a couple servers regularly, give it a try. It'll save you the <em>"which servers did I check again?"</em> moment.</p>
+
+    <hr>
+
+    <div class="footer">
+      <p><a href="https://github.com/Vae-Scrooge/remote-cmd">remote-cmd on GitHub</a> &middot; <a href="https://news.ycombinator.com/item?id=48347202">Discuss on HN</a> &middot; <code>pip install remote_cmd_manager</code></p>
+    </div>
+
+  </div>
+</body>
+</html>
