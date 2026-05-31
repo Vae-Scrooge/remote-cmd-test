@@ -20,7 +20,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
-from remote_cmd.utils.exceptions import SSHConnectionError, SSHCommandError, SSHFileTransferError
+from remote_cmd.utils.exceptions import (
+    SSHConnectionError,
+    SSHCommandError,
+    SSHFileTransferError,
+)
 
 # 模块日志记录器
 logger = logging.getLogger(__name__)
@@ -30,14 +34,15 @@ logger = logging.getLogger(__name__)
 # 数据类定义
 # ============================================================================
 
+
 @dataclass
 class ConnectionConfig:
     """
     SSH 连接配置类
-    
+
     用于存储和管理 SSH 连接所需的所有参数。
     支持密码认证、SSH 密钥认证和 SSH Agent 三种方式。
-    
+
     Attributes:
         hostname: 目标主机地址（IP 或域名）
         username: SSH 登录用户名
@@ -50,12 +55,12 @@ class ConnectionConfig:
                         可设为 paramiko.AutoAddPolicy() 自动接受新主机密钥，
                         或 paramiko.RejectPolicy() 严格验证。
                          警告: AutoAddPolicy 容易受到 MITM 攻击！
-    
+
     Note:
         - password 和 key_filename 可以同时为 None，此时使用 SSH Agent 认证
         - 生产环境建议使用 SSH 密钥或 Agent 认证，避免明文密码
     """
-    
+
     hostname: str
     username: str
     port: int = 22
@@ -64,7 +69,7 @@ class ConnectionConfig:
     timeout: int = 30
     compress: bool = True
     host_key_policy: Any = field(default_factory=lambda: paramiko.WarningPolicy())
-    
+
     def __post_init__(self):
         """初始化后验证：密码和密钥文件至少有一个，或者使用 SSH Agent"""
         # password 和 key_filename 可以同时为 None，此时使用 SSH Agent
@@ -74,35 +79,35 @@ class ConnectionConfig:
 class CommandResult:
     """
     命令执行结果类
-    
+
     封装远程命令执行的返回结果，包括标准输出、标准错误和退出码。
-    
+
     Attributes:
         command: 执行的命令字符串
         stdout: 标准输出内容
         stderr: 标准错误内容
         exit_code: 命令退出码（0 表示成功）
     """
-    
+
     command: str
     stdout: str
     stderr: str
     exit_code: int
-    
+
     @property
     def success(self) -> bool:
         """
         判断命令是否执行成功
-        
+
         Returns:
             bool: 退出码为 0 时返回 True，否则返回 False
         """
         return self.exit_code == 0
-    
+
     def __str__(self) -> str:
         """
         生成命令结果的可读字符串表示
-        
+
         Returns:
             str: 格式为 "状态符号 [退出码] 命令"
         """
@@ -114,19 +119,20 @@ class CommandResult:
 # SSH 客户端类
 # ============================================================================
 
+
 class SSHClient:
     """
     高级 SSH 客户端类
-    
+
     提供完整的 SSH 连接管理功能，支持上下文管理器模式，
     可以使用 `with` 语句自动管理连接的生命周期。
-    
+
     主要功能：
     - 建立/断开 SSH 连接
     - 执行远程命令（普通命令和 sudo 命令）
     - 文件上传/下载
     - 远程目录浏览
-    
+
     使用示例：
         >>> config = ConnectionConfig(
         ...     hostname="example.com",
@@ -137,42 +143,42 @@ class SSHClient:
         ...     result = client.execute("ls -la")
         ...     print(result.stdout)
     """
-    
+
     def __init__(self, config: ConnectionConfig):
         """
         初始化 SSH 客户端
-        
+
         Args:
             config: ConnectionConfig 对象，包含连接参数
-        
+
         Note:
             初始化时不会建立连接，需要调用 connect() 方法或使用上下文管理器
         """
         self.config = config
         self._client: Optional[paramiko.SSHClient] = None
         self._sftp: Optional[paramiko.SFTPClient] = None
-    
+
     # ========================================================================
     # 连接管理方法
     # ========================================================================
-    
+
     def connect(self) -> "SSHClient":
         """
         建立 SSH 连接
-        
+
         根据配置信息建立到远程服务器的 SSH 连接。
         支持密码认证和密钥认证两种方式。
-        
+
         Returns:
             SSHClient: 返回自身，支持链式调用
-            
+
         Raises:
             SSHConnectionError: 连接失败时抛出，包括：
                 - 认证失败
                 - 连接超时
                 - 主机无法解析
                 - 其他网络错误
-        
+
         Example:
             >>> client = SSHClient(config)
             >>> client.connect()  # 建立连接
@@ -182,10 +188,10 @@ class SSHClient:
         try:
             # 创建 SSH 客户端实例
             self._client = paramiko.SSHClient()
-            
+
             # 设置主机密钥策略（默认为 WarningPolicy，生产环境建议使用 RejectPolicy）
             self._client.set_missing_host_key_policy(self.config.host_key_policy)
-            
+
             # 构建连接参数字典
             connect_kwargs = {
                 "hostname": self.config.hostname,
@@ -194,7 +200,7 @@ class SSHClient:
                 "timeout": self.config.timeout,
                 "compress": self.config.compress,
             }
-            
+
             # 根据认证方式添加相应参数
             if self.config.password:
                 # 密码认证
@@ -205,16 +211,16 @@ class SSHClient:
                 if not key_path.exists():
                     raise SSHConnectionError(f"SSH 密钥文件不存在: {key_path}")
                 connect_kwargs["key_filename"] = str(key_path)
-            
+
             # 记录连接日志
             logger.info(f"正在连接到 {self.config.hostname}:{self.config.port}")
-            
+
             # 建立连接
             self._client.connect(**connect_kwargs)
             logger.info(f"成功连接到 {self.config.hostname}")
-            
+
             return self
-            
+
         except paramiko.AuthenticationException as e:
             raise SSHConnectionError(f"认证失败: {e}")
         except socket.timeout:
@@ -223,11 +229,11 @@ class SSHClient:
             raise SSHConnectionError(f"无法解析主机名: {self.config.hostname}")
         except Exception as e:
             raise SSHConnectionError(f"连接错误: {e}")
-    
+
     def disconnect(self) -> None:
         """
         断开 SSH 连接并清理资源
-        
+
         关闭 SFTP 和 SSH 连接，释放所有相关资源。
         即使连接已断开或出现错误，此方法也能安全执行。
         """
@@ -240,7 +246,7 @@ class SSHClient:
                 logger.warning(f"关闭 SFTP 连接时出错: {e}")
             finally:
                 self._sftp = None
-        
+
         # 关闭 SSH 连接
         if self._client:
             try:
@@ -250,23 +256,23 @@ class SSHClient:
                 logger.warning(f"关闭 SSH 连接时出错: {e}")
             finally:
                 self._client = None
-    
+
     def is_connected(self) -> bool:
         """
         检查 SSH 连接是否处于活动状态
-        
+
         Returns:
             bool: 连接活动返回 True，否则返回 False
         """
         if not self._client:
             return False
-        
+
         try:
             transport = self._client.get_transport()
             return transport is not None and transport.is_active()
         except Exception:
             return False
-    
+
     def _get_sftp(self) -> paramiko.SFTPClient:
         """获取 SFTP 客户端（延迟初始化）"""
         if not self._client:
@@ -278,52 +284,52 @@ class SSHClient:
     # ========================================================================
     # 上下文管理器支持
     # ========================================================================
-    
+
     def __enter__(self) -> "SSHClient":
         """
         上下文管理器入口：自动建立连接
-        
+
         Returns:
             SSHClient: 已连接的客户端实例
         """
         return self.connect()
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """
         上下文管理器出口：自动断开连接
-        
+
         Args:
             exc_type: 异常类型
             exc_val: 异常值
             exc_tb: 异常追踪信息
         """
         self.disconnect()
-    
+
     # ========================================================================
     # 命令执行方法
     # ========================================================================
-    
+
     def execute(
-        self, 
-        command: str, 
+        self,
+        command: str,
         timeout: Optional[int] = None,
-        environment: Optional[Dict[str, str]] = None
+        environment: Optional[Dict[str, str]] = None,
     ) -> CommandResult:
         """
         在远程服务器上执行命令
-        
+
         Args:
             command: 要执行的命令字符串
             timeout: 命令执行超时时间（秒），None 表示使用默认超时
             environment: 环境变量字典，将在命令执行前设置
-        
+
         Returns:
             CommandResult: 包含命令执行结果的对象
-        
+
         Raises:
             SSHCommandError: 命令执行失败时抛出
             SSHConnectionError: 未连接时抛出
-        
+
         Example:
             >>> result = client.execute("ls -la")
             >>> if result.success:
@@ -332,49 +338,48 @@ class SSHClient:
         # 检查连接状态
         if not self._client:
             raise SSHConnectionError("未连接，请先调用 connect() 方法")
-        
+
         try:
             logger.debug(f"执行命令: {command}")
-            
+
             # 构建环境变量设置命令
             env_str = ""
             if environment:
                 env_vars = [f"export {k}={v}" for k, v in environment.items()]
                 env_str = "; ".join(env_vars) + "; "
-            
+
             # 组合完整命令（切换到用户主目录执行）
             full_command = f"{env_str}cd ~ && {command}"
-            
+
             # 执行命令
             stdin, stdout, stderr = self._client.exec_command(
-                full_command, 
-                timeout=timeout
+                full_command, timeout=timeout
             )
-            
+
             # 获取命令执行结果
             exit_code = stdout.channel.recv_exit_status()
             stdout_data = stdout.read().decode("utf-8", errors="replace")
             stderr_data = stderr.read().decode("utf-8", errors="replace")
-            
+
             # 构建结果对象
             result = CommandResult(
                 command=command,
                 stdout=stdout_data,
                 stderr=stderr_data,
-                exit_code=exit_code
+                exit_code=exit_code,
             )
-            
+
             logger.debug(f"命令执行完成，退出码: {exit_code}")
             return result
-            
+
         except (paramiko.SSHException, OSError) as e:
             raise SSHCommandError(f"执行命令 '{command}' 失败: {e}")
-    
+
     def execute_sudo(
         self,
         command: str,
         password: Optional[str] = None,
-        timeout: Optional[int] = None
+        timeout: Optional[int] = None,
     ) -> CommandResult:
         """
         以 sudo 权限执行命令（安全实现）
@@ -419,27 +424,27 @@ class SSHClient:
                 command=command,
                 stdout=stdout_data,
                 stderr=stderr_data,
-                exit_code=exit_code
+                exit_code=exit_code,
             )
         except paramiko.SSHException as e:
             raise SSHCommandError(f"执行 sudo 命令 '{command}' 失败: {e}")
-    
+
     # ========================================================================
     # 文件传输方法
     # ========================================================================
-    
+
     def upload_file(self, local_path: str, remote_path: str) -> None:
         """
         上传本地文件到远程服务器
-        
+
         Args:
             local_path: 本地文件路径
             remote_path: 远程目标路径（绝对路径）
-        
+
         Raises:
             SSHFileTransferError: 文件传输失败时抛出
             SSHConnectionError: 未连接时抛出
-        
+
         Example:
             >>> client.upload_file("./script.sh", "/home/user/script.sh")
         """
@@ -457,22 +462,22 @@ class SSHClient:
             logger.info("文件上传完成")
         except (paramiko.SSHException, IOError, OSError) as e:
             raise SSHFileTransferError(f"文件上传失败: {e}")
-    
+
     def download_file(self, remote_path: str, local_path: str) -> None:
         """
         从远程服务器下载文件到本地
-        
+
         Args:
             remote_path: 远程文件路径（绝对路径）
             local_path: 本地目标路径
-        
+
         Raises:
             SSHFileTransferError: 文件传输失败时抛出
             SSHConnectionError: 未连接时抛出
-        
+
         Note:
             如果本地目录不存在，将自动创建
-        
+
         Example:
             >>> client.download_file("/var/log/syslog", "./logs/syslog")
         """
@@ -489,14 +494,14 @@ class SSHClient:
             logger.info("文件下载完成")
         except (paramiko.SSHException, IOError, OSError) as e:
             raise SSHFileTransferError(f"文件下载失败: {e}")
-    
+
     def list_remote_directory(self, remote_path: str = ".") -> List[Dict[str, Any]]:
         """
         列出远程目录内容
-        
+
         Args:
             remote_path: 远程目录路径，默认为当前目录
-        
+
         Returns:
             List[Dict[str, Any]]: 目录项信息列表，每个字典包含：
                 - name: 文件/目录名
@@ -504,11 +509,11 @@ class SSHClient:
                 - mode: 权限模式（八进制字符串）
                 - mtime: 修改时间戳
                 - is_dir: 是否为目录
-        
+
         Raises:
             SSHFileTransferError: 列出目录失败时抛出
             SSHConnectionError: 未连接时抛出
-        
+
         Example:
             >>> entries = client.list_remote_directory("/home/user")
             >>> for entry in entries:
@@ -520,17 +525,19 @@ class SSHClient:
             entries = []
             for entry in sftp.listdir_attr(remote_path):
                 mode = entry.st_mode if entry.st_mode is not None else 0
-                entries.append({
-                    "name": entry.filename,
-                    "size": entry.st_size,
-                    "mode": oct(mode)[-3:] if mode else "000",
-                    "mtime": entry.st_mtime,
-                    "is_dir": bool(mode & stat.S_IFDIR) if mode else False,
-                })
+                entries.append(
+                    {
+                        "name": entry.filename,
+                        "size": entry.st_size,
+                        "mode": oct(mode)[-3:] if mode else "000",
+                        "mtime": entry.st_mtime,
+                        "is_dir": bool(mode & stat.S_IFDIR) if mode else False,
+                    }
+                )
             return entries
         except (paramiko.SSHException, IOError, OSError) as e:
             raise SSHFileTransferError(f"列出远程目录失败: {e}")
-    
+
     def create_remote_directory(self, path: str) -> None:
         """创建远程目录（支持递归创建）"""
         sftp = self._get_sftp()
@@ -549,7 +556,7 @@ class SSHClient:
             logger.info(f"已创建远程目录: {path}")
         except (paramiko.SSHException, IOError, OSError) as e:
             raise SSHFileTransferError(f"创建远程目录失败: {e}")
-    
+
     def remove_remote_file(self, path: str) -> None:
         """删除远程文件"""
         sftp = self._get_sftp()
@@ -588,7 +595,7 @@ class SSHClient:
             logger.info(f"已删除远程目录: {path}")
         except (paramiko.SSHException, IOError, OSError) as e:
             raise SSHFileTransferError(f"删除远程目录失败: {e}")
-    
+
     def remote_file_exists(self, path: str) -> bool:
         """检查远程文件是否存在"""
         try:
@@ -612,7 +619,7 @@ class SSHClient:
                 "mode": oct(mode)[-3:] if mode else "000",
                 "mtime": stat_result.st_mtime,
                 "is_dir": stat.S_ISDIR(mode),
-                "is_file": stat.S_ISREG(mode)
+                "is_file": stat.S_ISREG(mode),
             }
         except (paramiko.SSHException, IOError, OSError) as e:
             raise SSHFileTransferError(f"获取文件信息失败: {e}")

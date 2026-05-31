@@ -5,7 +5,9 @@ from remote_cmd.core.ssh_client import ConnectionConfig
 
 
 def test_host_dataclass_roundtrip_and_connection_config():
-    host = Host(name="web-prod", hostname="192.0.2.10", username="admin", tags=["prod", "web"])
+    host = Host(
+        name="web-prod", hostname="192.0.2.10", username="admin", tags=["prod", "web"]
+    )
     # to_dict / from_dict round-trip
     d = host.to_dict()
     host_from = Host.from_dict(d)
@@ -20,7 +22,9 @@ def test_host_dataclass_roundtrip_and_connection_config():
 def test_hostmanager_crud_and_magic_methods():
     m = HostManager()
     h1 = Host(name="srv1", hostname="10.0.0.1", username="root", tags=["prod"])
-    h2 = Host(name="srv2", hostname="10.0.0.2", username="admin", port=2222, tags=["dev"])
+    h2 = Host(
+        name="srv2", hostname="10.0.0.2", username="admin", port=2222, tags=["dev"]
+    )
 
     # add and duplicate detection
     m.add_host(h1)
@@ -59,7 +63,9 @@ def test_hostmanager_crud_and_magic_methods():
 def test_persistence_save_and_load(tmp_path):
     m = HostManager()
     h1 = Host(name="srvA", hostname="203.0.113.1", username="root", tags=["alpha"])
-    h2 = Host(name="srvB", hostname="203.0.113.2", username="admin", port=2222, tags=["beta"])
+    h2 = Host(
+        name="srvB", hostname="203.0.113.2", username="admin", port=2222, tags=["beta"]
+    )
     m.add_host(h1)
     m.add_host(h2)
 
@@ -97,14 +103,19 @@ def test_connection_methods_mock_sshclient(monkeypatch):
     class DummySSH:
         def __init__(self, config):
             self.config = config
+
         def connect(self):
             return self
+
         def is_connected(self):
             return True
+
         def __enter__(self):
             return self.connect()
+
         def __exit__(self, *args):
             pass
+
         def disconnect(self):
             pass
 
@@ -112,6 +123,7 @@ def test_connection_methods_mock_sshclient(monkeypatch):
         return DummySSH(self.get_host(name).to_connection_config())
 
     import remote_cmd.core.host_manager as hm
+
     monkeypatch.setattr(hm.HostManager, "connect_to_host", mock_connect)
 
     mgr = hm.HostManager()

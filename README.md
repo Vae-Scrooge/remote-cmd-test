@@ -26,9 +26,9 @@
 - [详细使用说明](#详细使用说明)
 - [配置说明](#配置说明)
 - [示例场景](#示例场景)
-- [开发指南](DEVELOPMENT.md)
-- [故障排查](TROUBLESHOOTING.md)
-- [更新日志](CHANGELOG.md)
+- [开发指南](./docs/DEVELOPMENT.md)
+- [故障排查](./docs/TROUBLESHOOTING.md)
+- [更新日志](./CHANGELOG.md)
 - [许可证](#许可证)
 
 ---
@@ -628,11 +628,11 @@ if __name__ == "__main__":
 
 ## 文档索引
 
-- **[API 文档](API.md)** - 详细的 API 参考
-- **[开发指南](DEVELOPMENT.md)** - 如何参与开发
-- **[贡献指南](CONTRIBUTING.md)** - 如何贡献代码
-- **[故障排查](TROUBLESHOOTING.md)** - 常见问题解答
-- **[更新日志](CHANGELOG.md)** - 版本更新记录
+- **[API 文档](./docs/API.md)** - 详细的 API 参考
+- **[开发指南](./docs/DEVELOPMENT.md)** - 如何参与开发
+- **[贡献指南](./CONTRIBUTING.md)** - 如何贡献代码
+- **[故障排查](./docs/TROUBLESHOOTING.md)** - 常见问题解答
+- **[更新日志](./CHANGELOG.md)** - 版本更新记录
 
 ---
 

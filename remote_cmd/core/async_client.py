@@ -22,7 +22,9 @@ logger = logging.getLogger(__name__)
 class AsyncSSHClient:
     """Async 版本的 SSHClient，内部通过组合复用 Sync SSHClient 的实现。"""
 
-    def __init__(self, config: ConnectionConfig, loop: Optional[asyncio.AbstractEventLoop] = None):
+    def __init__(
+        self, config: ConnectionConfig, loop: Optional[asyncio.AbstractEventLoop] = None
+    ):
         self.config = config
         self._sync: SSHClient = SSHClient(config)
         self._loop = loop or asyncio.get_event_loop()
@@ -44,16 +46,20 @@ class AsyncSSHClient:
         return self._connected
 
     async def execute(
-        self, command: str, timeout: Optional[int] = None,
-        environment: Optional[Dict[str, str]] = None
+        self,
+        command: str,
+        timeout: Optional[int] = None,
+        environment: Optional[Dict[str, str]] = None,
     ) -> CommandResult:
         return await self._loop.run_in_executor(
             None, self._execute_sync, command, timeout, environment
         )
 
     async def execute_sudo(
-        self, command: str, password: Optional[str] = None,
-        timeout: Optional[int] = None
+        self,
+        command: str,
+        password: Optional[str] = None,
+        timeout: Optional[int] = None,
     ) -> CommandResult:
         return await self._loop.run_in_executor(
             None, self._execute_sudo_sync, command, password, timeout
@@ -69,10 +75,10 @@ class AsyncSSHClient:
             None, self._download_sync, remote_path, local_path
         )
 
-    async def list_remote_directory(self, remote_path: str = ".") -> List[Dict[str, Any]]:
-        return await self._loop.run_in_executor(
-            None, self._list_dir_sync, remote_path
-        )
+    async def list_remote_directory(
+        self, remote_path: str = "."
+    ) -> List[Dict[str, Any]]:
+        return await self._loop.run_in_executor(None, self._list_dir_sync, remote_path)
 
     # ------------------------------------------------------------------
     # Sync helpers wrapping sync SSHClient for thread-pool execution
@@ -86,14 +92,18 @@ class AsyncSSHClient:
         self._connected = False
 
     def _execute_sync(
-        self, command: str, timeout: Optional[int] = None,
-        environment: Optional[Dict[str, str]] = None
+        self,
+        command: str,
+        timeout: Optional[int] = None,
+        environment: Optional[Dict[str, str]] = None,
     ) -> CommandResult:
         return self._sync.execute(command, timeout=timeout, environment=environment)
 
     def _execute_sudo_sync(
-        self, command: str, password: Optional[str] = None,
-        timeout: Optional[int] = None
+        self,
+        command: str,
+        password: Optional[str] = None,
+        timeout: Optional[int] = None,
     ) -> CommandResult:
         return self._sync.execute_sudo(command, password=password, timeout=timeout)
 
@@ -121,8 +131,10 @@ class ConnectionPool:
     """异步 SSH 连接池，复用 AsyncSSHClient 实例。"""
 
     def __init__(
-        self, config: ConnectionConfig, max_connections: int = 10,
-        loop: Optional[asyncio.AbstractEventLoop] = None
+        self,
+        config: ConnectionConfig,
+        max_connections: int = 10,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
     ):
         self.config = config
         self._max = max_connections
