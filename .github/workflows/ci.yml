@@ -49,7 +49,14 @@ jobs:
     
     - name: Run tests with pytest
       run: |
-        pytest tests/ --cov=remote_cmd --cov-report=xml --cov-report=term
+        pytest tests/ --cov=remote_cmd --cov-report=xml --cov-report=term 2>&1 | tee pytest_output.txt
+        if [ ${PIPESTATUS[0]} -ne 0 ] && [ -s pytest_output.txt ]; then
+          head -30 pytest_output.txt > /tmp/pytest_anno.txt
+          while IFS= read -r line; do
+            echo "::error title=pytest::$line"
+          done < /tmp/pytest_anno.txt
+        fi
+        exit ${PIPESTATUS[0]}
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
