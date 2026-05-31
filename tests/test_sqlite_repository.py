@@ -1,6 +1,5 @@
 """SqliteHostRepository 主机存储测试"""
 
-
 from remote_cmd.core.host import Host
 from remote_cmd.repository.sqlite_host_repository import SqliteHostRepository
 

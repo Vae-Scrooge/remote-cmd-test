@@ -75,6 +75,9 @@ ignore = [
     "B904",  # raise-within-try 暂时容忍
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402"]  # __init__.py 允许 imports 不在文件最顶部
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
