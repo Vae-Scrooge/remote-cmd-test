@@ -1,25 +1,38 @@
-# Remote CMD — SSH Server Management Without the Overhead
+<p align="center">
+  <img src="https://img.shields.io/pypi/v/remote_cmd_manager?style=for-the-badge&logo=pypi&logoColor=white&label=PyPI" alt="PyPI">
+  <img src="https://img.shields.io/pypi/dm/remote_cmd_manager?style=for-the-badge&logo=python&logoColor=white&label=Downloads" alt="Downloads">
+  <img src="https://img.shields.io/github/stars/Vae-Scrooge/remote-cmd?style=for-the-badge&logo=github" alt="Stars">
+  <img src="https://img.shields.io/badge/python-3.9%2B-blue?style=for-the-badge&logo=python" alt="Python">
+  <img src="https://img.shields.io/github/license/Vae-Scrooge/remote-cmd?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/github/actions/workflow/status/Vae-Scrooge/remote-cmd/ci.yml?style=for-the-badge&logo=githubactions&label=CI" alt="CI">
+  <img src="https://img.shields.io/badge/code%20style-black-black?style=for-the-badge" alt="Code Style">
+</p>
 
-<div align="center">
+<h1 align="center">Remote CMD — SSH Server Management<br><small>Without the Overhead</small></h1>
 
-[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![PyPI version](https://img.shields.io/pypi/v/remote_cmd_manager)](https://pypi.org/project/remote_cmd_manager/)
-[![PyPI downloads](https://img.shields.io/pypi/dm/remote_cmd_manager)](https://pypi.org/project/remote_cmd_manager/)
-[![CI](https://github.com/Vae-Scrooge/remote-cmd/workflows/CI/badge.svg)](https://github.com/Vae-Scrooge/remote-cmd/actions)
-[![Code Style](https://img.shields.io/badge/code%20style-black-black)](https://github.com/psf/black)
+<p align="center">
+  <b><code>pip install remote_cmd_manager</code></b> &nbsp;·&nbsp;
+  <a href="#quick-start">Quick Start</a> &nbsp;·&nbsp;
+  <a href="#use-cases">Use Cases</a> &nbsp;·&nbsp;
+  <a href="#python-api">Python API</a> &nbsp;·&nbsp;
+  <a href="./docs">Docs</a> &nbsp;·&nbsp;
+  <a href="./CONTRIBUTING.md">Contributing</a>
+</p>
+
+<p align="center">
+  <a href="https://asciinema.org/a/9yLeYj73muPUuAQY" target="_blank">
+    <img src="https://asciinema.org/a/9yLeYj73muPUuAQY.svg" width="720" alt="Demo">
+  </a>
+</p>
+
+---
+
+**Remote CMD** is a lightweight Python CLI + API for managing servers over SSH. Add hosts, run commands, transfer files, and target groups by tags — no Ansible DSL or shell loops required.
 
 ```bash
-pip install remote_cmd_manager
+# One command to get started
+pip install remote_cmd_manager && remote-cmd host add web-01 192.168.1.10 ubuntu --key ~/.ssh/id_rsa && remote-cmd run web-01 "uptime"
 ```
-
-[Quick Start](#quick-start) · [Use Cases](#use-cases) · [Python API](#python-api) · [Docs](./docs) · [Contributing](./CONTRIBUTING.md)
-
-</div>
-
-[![asciicast](https://asciinema.org/a/9yLeYj73muPUuAQY.svg)](https://asciinema.org/a/9yLeYj73muPUuAQY)
-
-Remote CMD is a lightweight Python CLI + API for managing servers over SSH. Add hosts, run commands, transfer files, and target groups by tags — no Ansible DSL or shell loops required.
 
 ---
 
@@ -31,7 +44,7 @@ Remote CMD is a lightweight Python CLI + API for managing servers over SSH. Add 
 | Batch commands across hosts | ✅ `batch-run` | ❌ Write a loop | ✅ Playbook | ✅ |
 | File transfer (upload/download) | ✅ Built-in | ✅ scp | ✅ copy module | ✅ |
 | Python API | ✅ `from remote_cmd import ...` | ❌ | ❌ YAML-only | ✅ |
-| Zero setup | ✅ pip install → go | ❌ Config SSH | ❌ ansible.cfg | ❌ |
+| Zero setup | ✅ `pip install → go` | ❌ Config SSH | ❌ `ansible.cfg` | ❌ |
 | Learning curve | **Low** | Low | **High** | Medium |
 
 **Use `remote-cmd` when** you need a CLI that works immediately for ad-hoc SSH tasks. **Use Ansible when** you need full configuration management and idempotent playbooks.
@@ -58,7 +71,7 @@ remote-cmd batch-run -t production "df -h /"
 
 ## Use Cases
 
-### System Admin — Check disk across 20 servers in one command
+### 🖥️ System Admin — Check disk across 20 servers in one command
 ```bash
 remote-cmd batch-run -t production "df -h / | tail -1"
 # Output:
@@ -67,7 +80,7 @@ remote-cmd batch-run -t production "df -h / | tail -1"
 #   ✗ db-01   → Connection refused
 ```
 
-### Deploy — Pull code and restart service
+### 🚀 Deploy — Pull code and restart service
 ```python
 from remote_cmd.core.host_manager import HostManager
 
@@ -79,12 +92,12 @@ for host in manager.list_hosts(tag="staging"):
         client.execute_sudo("systemctl restart app", password="sudopass")
 ```
 
-### Incident Response — Check logs across all servers
+### 🔥 Incident Response — Check logs across all servers
 ```bash
 remote-cmd batch-run -t web "journalctl -xe -n 50 | grep -i error"
 ```
 
-### Config Update — Upload and reload nginx across tagged hosts
+### 🔧 Config Update — Upload and reload nginx across tagged hosts
 ```bash
 # Upload new config
 scp nginx.conf user@server:/tmp/nginx.conf  # or use the upload command
@@ -161,12 +174,13 @@ pip install -e ".[dev]"
 | [Development Guide](./docs/DEVELOPMENT.md) | Setup dev environment, contributing |
 | [Troubleshooting](./docs/TROUBLESHOOTING.md) | Common issues and solutions |
 | [Changelog](./CHANGELOG.md) | Release history |
+| [Mobile Remote Guide](./MOBILE-REMOTE-GUIDE.md) | Manage servers from your phone |
 
 ---
 
 ## Project Status
 
-Beta. The core API is stable. Breaking changes will be communicated via semantic versioning.
+**Beta.** The core API is stable. Breaking changes will be communicated via semantic versioning.
 
 **Roadmap:**
 - [ ] Async SSH operations (parallel execution)
@@ -175,14 +189,24 @@ Beta. The core API is stable. Breaking changes will be communicated via semantic
 
 ---
 
-## License
+## Contributing
 
-MIT © Vae-Scrooge
+We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) to get started.
+
+Before contributing, please read our [Code of Conduct](./CODE_OF_CONDUCT.md).
 
 ---
 
-<div align="center">
+## License
 
-**Star on [GitHub](https://github.com/Vae-Scrooge/remote-cmd) · Report bugs [here](https://github.com/Vae-Scrooge/remote-cmd/issues)**
+MIT © [Vae-Scrooge](https://github.com/Vae-Scrooge)
 
-</div>
+---
+
+<p align="center">
+  <a href="https://github.com/Vae-Scrooge/remote-cmd">
+    <img src="https://img.shields.io/github/stars/Vae-Scrooge/remote-cmd?style=social" alt="Star">
+  </a>
+  <br>
+  <sub>If you find this project useful, <strong>star it on GitHub</strong> ⭐</sub>
+</p>

@@ -1,0 +1,94 @@
+name: Bug Report
+description: File a bug report to help us improve remote-cmd
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees:
+  - Vae-Scrooge
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Please provide as much detail as possible.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: "remote-cmd run fails with..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Minimal steps to reproduce the behavior
+      placeholder: |
+        1. Install remote-cmd-manager
+        2. Add a host: `remote-cmd host add test 1.2.3.4 ubuntu`
+        3. Run: `remote-cmd run test "uptime"`
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output / Stack Trace
+      description: Copy and paste any relevant logs or error output
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version of remote-cmd-manager are you running?
+      placeholder: "e.g., 0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Linux
+        - macOS
+        - Windows (WSL)
+        - Windows (native)
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: python-version
+    attributes:
+      label: Python Version
+      options:
+        - "3.8"
+        - "3.9"
+        - "3.10"
+        - "3.11"
+        - "3.12"
+        - "3.13"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmations
+      options:
+        - label: I have searched existing issues and this is not a duplicate
+          required: true
+        - label: I have removed sensitive information from logs/configuration
+          required: true

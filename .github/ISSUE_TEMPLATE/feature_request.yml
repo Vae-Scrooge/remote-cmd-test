@@ -1,0 +1,55 @@
+name: Feature Request
+description: Suggest an idea for remote-cmd
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your idea! Please describe it clearly so we can understand the use case.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem?
+      description: A clear and concise description of what the problem is
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe the Solution You'd Like
+      description: A clear and concise description of what you want to happen
+      placeholder: "I'd like remote-cmd to support..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Describe Alternatives You've Considered
+      description: Any workarounds or alternative solutions
+      placeholder: "Currently I'm using a shell loop, but it's cumbersome..."
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or examples about the feature request here
+
+  - type: input
+    id: use-case
+    attributes:
+      label: Use Case
+      description: How would you use this feature in your workflow?
+      placeholder: "I manage 50+ servers and need to..."
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmations
+      options:
+        - label: I have searched existing issues and this is not a duplicate
+          required: true
